@@ -1,7 +1,5 @@
-# csnetwk-mp-lsnp
+# CSNETWK MP: LSNP
 Repository for CSNETWK MP: Local Social Networking Protocol
-
-# CSNETWK MP: LSNP - Lightweight Social Networking Protocol
 
 ## Setup
 1. Clone the repository from main
