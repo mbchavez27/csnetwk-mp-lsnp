@@ -9,11 +9,10 @@ git clone https://github.com/mbchavez27/csnetwk-mp-lsnp.git
 cd csnetwk-mp-lsnp
 ```
 
-2. Create and switch to your feature branch
+2. Create and switch to your feature (task) branch
 
 ```bash
-git branch feature_name
-git checkout branch_name
+git switch -c feature/feature-name
 ```
 
 ## Testing
