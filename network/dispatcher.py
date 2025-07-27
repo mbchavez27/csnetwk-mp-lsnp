@@ -5,6 +5,20 @@ def dispatch_message(message: str, sender_ip: str, peer_table=None, logger=None)
     msg_dict = parse_message(message)
     msg_type = msg_dict.get("TYPE")
 
+    from_field = msg_dict.get("FROM") or msg_dict.get("USER_ID", "")
+    claimed_ip = from_field.split("@")[-1] if "@" in from_field else None
+
+    # Safety Considerations
+    SAFE_TYPES = {"PING", "PROFILE"}
+    if msg_type not in SAFE_TYPES:
+        if claimed_ip != sender_ip:
+            warning = f"[SECURITY] Claimed IP ({claimed_ip}) ≠ sender IP ({sender_ip})"
+            if logger:
+                logger.warn(warning)
+            else:
+                print(warning)
+            return
+        
     if msg_type == "PROFILE":
         profile.handle_PROFILE(msg_dict, sender_ip, peer_table, logger)
     elif msg_type == "PING":
