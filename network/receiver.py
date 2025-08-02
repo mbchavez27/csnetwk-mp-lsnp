@@ -10,6 +10,12 @@ def listen_for_messages(callback, ip='0.0.0.0', port=50999):
         return
 
     print(f"[RECEIVER] Listening on {ip}:{port}...")
-    while True:
-        data, addr = sock.recvfrom(65535)
-        callback(data.decode(), addr)
+
+    try:
+        while True:
+            data, addr = sock.recvfrom(65535)
+            callback(data.decode(), addr)
+    except KeyboardInterrupt:
+        print("\n[INFO] Stopped listening (Keyboard Interrupt). Exiting.")
+    finally:
+        sock.close()

@@ -1,4 +1,5 @@
 import datetime
+from utils.formatter import format_message 
 
 class Logger:
     def __init__(self, verbose=False):
@@ -6,11 +7,16 @@ class Logger:
 
     def send(self, message, target):
         if self.verbose:
-            print(f"[{self._timestamp()}] SEND > {target}:\n{message.strip()}\n")
+            if isinstance(message, dict):
+                message = format_message(message)
+        print(f"[{self._timestamp()}] SEND > {target}:\n{message.strip()}\n")
+
 
     def recv(self, message, sender_ip):
         if self.verbose:
-            print(f"[{self._timestamp()}] RECV < {sender_ip}:\n{message.strip()}\n")
+            if isinstance(message, dict):
+                message = format_message(message)
+        print(f"[{self._timestamp()}] RECV < {sender_ip}:\n{message.strip()}\n")
 
     def info(self, msg):
         if self.verbose:
@@ -18,6 +24,14 @@ class Logger:
 
     def _timestamp(self):
         return datetime.datetime.now().strftime("%H:%M:%S")
+    
+    def success(self, msg):
+        if self.verbose:
+            print(f"[{self._timestamp()}] SUCCESS: {msg}")
+        
+    def warning(self, msg):
+        if self.verbose:
+            print(f"[{self._timestamp()}] WARNING: {msg}")
     
     def debug(self, msg):
         if self.verbose:

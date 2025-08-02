@@ -14,7 +14,7 @@ def dispatch_message(message: str, sender_ip: str, peer_table=None, logger=None)
         if claimed_ip != sender_ip:
             warning = f"[SECURITY] Claimed IP ({claimed_ip}) ≠ sender IP ({sender_ip})"
             if logger:
-                logger.warn(warning)
+                logger.warning(warning)
             else:
                 print(warning)
             return
@@ -32,11 +32,11 @@ def dispatch_message(message: str, sender_ip: str, peer_table=None, logger=None)
     elif msg_type == "UNFOLLOW":
         pass
     elif msg_type == "FILE_OFFER":
-        pass
+        file_transfer.handle_file_offer(msg_dict, peer_table, logger)
     elif msg_type == "FILE_CHUNK":
-        pass
+        file_transfer.handle_file_chunk(msg_dict, peer_table, logger, send_message)
     elif msg_type == "FILE_RECEIVED":
-        pass
+        file_transfer.handle_file_received(msg_dict, peer_table, logger)
     elif msg_type == "TICTACTOE_INVITE":
         pass
     elif msg_type == "TICTACTOE_MOVE":
