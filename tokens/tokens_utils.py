@@ -1,5 +1,5 @@
-from generator import generate_token
-from validator import validate_token
+from tokens.generator import generate_token
+from tokens.validator import validate_token
 
 DEFAULT_TTL = 3600  
 
