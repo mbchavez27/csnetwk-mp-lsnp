@@ -1,3 +1,8 @@
+import os
+from utils.formatter import format_message
+from handlers.file_transfer import build_file_offer, build_file_chunk
+from network.sender import send_message
+
 def handle_user_command(input_str, user_profile):
     """
     Dispatches a command based on user input.
@@ -27,6 +32,8 @@ def handle_user_command(input_str, user_profile):
     # 
     # add your commands
     #
+    elif command == "/sendfile":
+        handle_sendfile_command(args, user_profile)
     elif command == "/help":
         handle_help_command()
     else:
@@ -92,4 +99,58 @@ def handle_help_command():
     print("Available commands:")
     print("  /profile name=\"Your Name\" status=\"Your status\"")
     print("  /status  Exploring LSNP!")    
+    print("  /sendfile <user@ip> <file_path>")
     print("  /help")
+
+
+def handle_sendfile_command(args, user_profile):
+    if len(args) != 2:
+        print("Usage: /sendfile <user@ip> <file_path>")
+        return
+
+    to_id = args[0]
+    file_path = args[1]
+
+    if not os.path.exists(file_path):
+        print(f"File not found: {file_path}")
+        return
+    
+    token = user_profile.get("token", "")
+    if "file" not in token:
+        print("Token does not include 'file' scope.")
+        return
+
+    with open(file_path, "rb") as f:
+        file_data = f.read()
+
+    chunk_size = 1000  
+    chunks = [file_data[i:i + chunk_size] for i in range(0, len(file_data), chunk_size)]
+    total_chunks = len(chunks)
+    filename = os.path.basename(file_path)
+    to_ip = to_id.split("@")[1]
+
+    offer_msg = build_file_offer(
+        from_id=user_profile["user_id"],
+        to_id=to_id,
+        filename=filename,
+        filesize=len(file_data),
+        total_chunks=total_chunks,
+        token=token,
+    )
+    send_message(format_message(offer_msg), to_ip)
+    user_profile["logger"].send(offer_msg, to_ip)
+
+    for i, chunk in enumerate(chunks):
+        chunk_msg = build_file_chunk(
+            from_id=user_profile["user_id"],
+            to_id=to_id,
+            filename=filename,
+            chunk_index=i,
+            chunk_total=total_chunks,
+            data=chunk,
+            token=token,
+        )
+        send_message(format_message(chunk_msg), to_ip)
+        user_profile["logger"].send(chunk_msg, to_ip)
+
+    print(f"File '{filename}' sent to {to_id} in {total_chunks} chunks.")

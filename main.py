@@ -11,6 +11,7 @@ from handlers.commands import handle_user_command
 from utils.logger import Logger
 from utils.ip import get_own_ip
 from utils.peers import PeerTable
+from tokens.generator import generate_token
 
 peer_table = PeerTable()
 BROADCAST_INTERVAL = 300 
@@ -35,6 +36,14 @@ def main():
         "user_id": user_id,
         "logger": logger,
     }
+
+    default_scopes = ["file", "chat", "broadcast", "follow", "group", "game"]
+    token = generate_token(
+        user_id=user_id,
+        ttl=300,  
+        scope=",".join(default_scopes)
+    )
+    user_profile["token"] = token
 
     last_profile_time = 0
 
