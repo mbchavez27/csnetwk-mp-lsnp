@@ -5,6 +5,8 @@ from network.sender import send_message
 from tokens.tokens_utils import get_valid_token
 from handlers.follow import build_follow_message, build_unfollow_message
 from handlers.dm import build_dm_message
+from handlers.post import build_post_message
+from network.sender import unicast_message, broadcast_message
 
 def handle_user_command(input_str, user_profile):
     """
@@ -25,7 +27,7 @@ def handle_user_command(input_str, user_profile):
     elif command == "/verbose":
         handle_verbose_command(args, user_profile)
     elif command == "/post":
-        pass
+        handle_post_command(args, user_profile)
     elif command == "/dm":
         handle_dm_command(args, user_profile)
     elif command == "/follow":
@@ -155,6 +157,17 @@ def handle_sendfile_command(args, user_profile):
 
     print(f"File '{filename}' sent to {to_id} in {total_chunks} chunks.")
 
+def handle_post_command(args, user_profile):
+    if not args:
+        print("Usage: /post <message>")
+        return
+
+    content = " ".join(args)
+    token = get_valid_token("broadcast", user_profile)
+    user_id = user_profile["user_id"]
+    message = build_post_message(user_id, content, token)
+    broadcast_message(message, user_profile["ip"])
+
 def handle_follow_command(args, user_profile):
     """
     SENDS A FOLLOW MESSAGE TO THE USER.
@@ -165,33 +178,38 @@ def handle_follow_command(args, user_profile):
 
     receiver_id = args[0]
     sender_id = user_profile["user_id"]
+    token = get_valid_token("follow", user_profile)
+    message = build_follow_message(sender_id, receiver_id, token)
 
-    message = build_follow_message(sender_id, receiver_id)
-
-    target_user = user_profile["peer_table"].get(receiver_id)
+    target_user = user_profile["peer_table"].get_peer(receiver_id)
     if not target_user:
-        print(f"User{receiver_id} not found.")
+        print(f"User {receiver_id} not found.")
         return
-    print(f"You followed {receiver_id}")
 
+    unicast_message(message, target_user["ip"])
+    user_profile["peer_table"].follow(receiver_id)
+    print(f"You followed {receiver_id}")
 
 def handle_unfollow_command(args, user_profile):
     """
     SENDS AN UNFOLLOW MESSAGE TO THE USER.
     """
     if not args:
-        print("Usage: /follow user_id")
+        print("Usage: /unfollow user_id")
         return
 
     receiver_id = args[0]
     sender_id = user_profile["user_id"]
+    token = get_valid_token("follow", user_profile)
+    message = build_unfollow_message(sender_id, receiver_id, token)
 
-    message = build_follow_message(sender_id, receiver_id)
-
-    target_user = user_profile["peer_table"].get(receiver_id)
+    target_user = user_profile["peer_table"].get_peer(receiver_id)
     if not target_user:
-        print(f"User{receiver_id} not found.")
+        print(f"User {receiver_id} not found.")
         return
+
+    unicast_message(message, target_user["ip"])
+    user_profile["peer_table"].unfollow(receiver_id)
     print(f"You unfollowed {receiver_id}")
 
 def handle_dm_command(args, user_profile):
