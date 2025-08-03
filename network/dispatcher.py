@@ -1,4 +1,4 @@
-from handlers import profile, ping, post, file_transfer
+from handlers import profile, ping, post, file_transfer, post, dm, follow, like
 from utils.parser import parse_message
 from network.sender import send_message
 
@@ -25,13 +25,13 @@ def dispatch_message(message: str, sender_ip: str, peer_table=None, logger=None)
     elif msg_type == "PING":
         ping.handle_PING(msg_dict, sender_ip, peer_table, logger)
     elif msg_type == "POST":
-        pass
+        post.handle_post(msg_dict, peer_table, logger)
     elif msg_type == "DM":
-        pass
+        dm.handle_dm(msg_dict, peer_table, logger)
     elif msg_type == "FOLLOW":
-        pass
+        follow.handle_follow(msg_dict, peer_table, logger)
     elif msg_type == "UNFOLLOW":
-        pass
+        follow.handle_unfollow(msg_dict, peer_table, logger)
     elif msg_type == "FILE_OFFER":
         file_transfer.handle_file_offer(msg_dict, peer_table, logger)
     elif msg_type == "FILE_CHUNK":
@@ -44,6 +44,10 @@ def dispatch_message(message: str, sender_ip: str, peer_table=None, logger=None)
         pass
     elif msg_type == "TICTACTOE_RESULT":
         pass
+    elif msg_type == "LIKE":
+        like.handle_like(msg_dict, peer_table, logger)
+    elif msg_type == "UNLIKE":
+        like.handle_like(msg_dict, peer_table, logger)
     elif msg_type == "GROUP_CREATE":
         pass
     elif msg_type == "GROUP_UPDATE":
