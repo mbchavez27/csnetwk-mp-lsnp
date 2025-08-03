@@ -2,6 +2,7 @@ import os
 from utils.formatter import format_message
 from handlers.file_transfer import build_file_offer, build_file_chunk
 from network.sender import send_message
+from tokens.tokens_utils import get_valid_token
 
 def handle_user_command(input_str, user_profile):
     """
@@ -115,10 +116,7 @@ def handle_sendfile_command(args, user_profile):
         print(f"File not found: {file_path}")
         return
     
-    token = user_profile.get("token", "")
-    if "file" not in token:
-        print("Token does not include 'file' scope.")
-        return
+    token = get_valid_token("file", user_profile)
 
     with open(file_path, "rb") as f:
         file_data = f.read()

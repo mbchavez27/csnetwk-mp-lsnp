@@ -37,14 +37,6 @@ def main():
         "logger": logger,
     }
 
-    default_scopes = ["file", "chat", "broadcast", "follow", "group", "game"]
-    token = generate_token(
-        user_id=user_id,
-        ttl=300,  
-        scope=",".join(default_scopes)
-    )
-    user_profile["token"] = token
-
     last_profile_time = 0
 
     # User Discovery: PING or PROFILE at regular 300-second intervals using broadcast communication

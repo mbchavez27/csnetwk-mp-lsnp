@@ -31,6 +31,8 @@
 import os
 import base64
 from network.sender import send_message
+from tokens.validator import validate_token
+from utils.formatter import format_message
 
 # Track incoming file chunks by filename
 incoming_files = {}  
@@ -83,6 +85,11 @@ def handle_file_offer(msg, peer_table, logger):
     logger.info(f"[FILE_OFFER] Ready to receive {filename} ({total_chunks} chunks)")
 
 def handle_file_chunk(msg, peer_table, logger, send_func):
+    token = msg.get("TOKEN")
+    if not validate_token(token, expected_scope="file"):
+        logger.warn(f"[FILE_OFFER] Invalid token from {msg.get('FROM')}")
+        return
+    
     filename = msg["FILENAME"]
     chunk_index = int(msg["CHUNK_INDEX"])
     data = base64.b64decode(msg["DATA"])
@@ -103,7 +110,9 @@ def handle_file_chunk(msg, peer_table, logger, send_func):
 
         logger.success(f"[FILE_RECEIVED] {filename} saved to {save_path}.")
         response = build_file_received(msg["TO"], msg["FROM"], filename, msg["TOKEN"])
-        send_func(response, msg["FROM"])
+        to_ip = msg["FROM"].split("@")[1]
+        send_func(format_message(response), to_ip)
+
         del incoming_files[filename]
 
 def handle_file_received(msg, peer_table, logger):

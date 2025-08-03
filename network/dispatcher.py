@@ -1,5 +1,6 @@
-from handlers import profile, ping, post
+from handlers import profile, ping, post, file_transfer
 from utils.parser import parse_message
+from network.sender import send_message
 
 def dispatch_message(message: str, sender_ip: str, peer_table=None, logger=None):
     msg_dict = parse_message(message)
@@ -9,15 +10,15 @@ def dispatch_message(message: str, sender_ip: str, peer_table=None, logger=None)
     claimed_ip = from_field.split("@")[-1] if "@" in from_field else None
 
     # Safety Considerations
-    SAFE_TYPES = {"PING", "PROFILE"}
-    if msg_type not in SAFE_TYPES:
-        if claimed_ip != sender_ip:
-            warning = f"[SECURITY] Claimed IP ({claimed_ip}) ≠ sender IP ({sender_ip})"
-            if logger:
-                logger.warning(warning)
-            else:
-                print(warning)
-            return
+    #SAFE_TYPES = {"PING", "PROFILE"}
+    #if msg_type not in SAFE_TYPES:
+    #    if claimed_ip != sender_ip:
+    #        warning = f"[SECURITY] Claimed IP ({claimed_ip}) ≠ sender IP ({sender_ip})"
+    #        if logger:
+    #            logger.warning(warning)
+    #        else:
+    #            print(warning)
+    #        return
         
     if msg_type == "PROFILE":
         profile.handle_PROFILE(msg_dict, sender_ip, peer_table, logger)
