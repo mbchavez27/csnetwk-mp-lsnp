@@ -3,6 +3,11 @@ from utils.formatter import format_message
 from handlers.file_transfer import build_file_offer, build_file_chunk
 from network.sender import send_message
 from tokens.tokens_utils import get_valid_token
+from handlers.follow import build_follow_message, build_unfollow_message
+from handlers.dm import build_dm_message
+from handlers.post import build_post_message
+from handlers.like import build_like_message
+from network.sender import unicast_message, broadcast_message
 
 def handle_user_command(input_str, user_profile):
     """
@@ -23,16 +28,15 @@ def handle_user_command(input_str, user_profile):
     elif command == "/verbose":
         handle_verbose_command(args, user_profile)
     elif command == "/post":
-        pass
+        handle_post_command(args, user_profile)
     elif command == "/dm":
-        pass
+        handle_dm_command(args, user_profile)
     elif command == "/follow":
-        pass
+        handle_follow_command(args, user_profile)
     elif command == "/unfollow":
-        pass
-    # 
-    # add your commands
-    #
+        handle_unfollow_command(args, user_profile)
+    elif command == "/like":
+        handle_like_command(args, user_profile)
     elif command == "/sendfile":
         handle_sendfile_command(args, user_profile)
     elif command == "/help":
@@ -152,3 +156,129 @@ def handle_sendfile_command(args, user_profile):
         user_profile["logger"].send(chunk_msg, to_ip)
 
     print(f"File '{filename}' sent to {to_id} in {total_chunks} chunks.")
+
+def handle_post_command(args, user_profile):
+    if not args:
+        print("Usage: /post <message>")
+        return
+
+    content = " ".join(args)
+    token = get_valid_token("broadcast", user_profile)
+    user_id = user_profile["user_id"]
+
+    message_str = build_post_message(user_id, content, token)
+    
+    msg_dict = {}
+    for line in message_str.strip().splitlines():
+        if ":" in line:
+            key, value = line.split(":", 1)
+            msg_dict[key.strip()] = value.strip()
+
+    key = (msg_dict["USER_ID"], int(msg_dict["TIMESTAMP"]))
+    user_profile["recent_posts"][key] = msg_dict["CONTENT"]
+
+    broadcast_message(message_str, user_profile["ip"])
+
+def handle_follow_command(args, user_profile):
+    """
+    SENDS A FOLLOW MESSAGE TO THE USER.
+    """
+    if not args:
+        print("Usage: /follow <user_id>")
+        return
+
+    receiver_id = args[0]
+    sender_id = user_profile["user_id"]
+    token = get_valid_token("follow", user_profile)
+    message = build_follow_message(sender_id, receiver_id, token)
+
+    target_user = user_profile["peer_table"].get_peer(receiver_id)
+    if not target_user:
+        print(f"User {receiver_id} not found.")
+        return
+
+    unicast_message(message, target_user["ip"])
+    user_profile["peer_table"].follow(receiver_id)
+    print(f"You followed {receiver_id}")
+
+def handle_unfollow_command(args, user_profile):
+    """
+    SENDS AN UNFOLLOW MESSAGE TO THE USER.
+    """
+    if not args:
+        print("Usage: /unfollow <user_id>")
+        return
+
+    receiver_id = args[0]
+    sender_id = user_profile["user_id"]
+    token = get_valid_token("follow", user_profile)
+    message = build_unfollow_message(sender_id, receiver_id, token)
+
+    target_user = user_profile["peer_table"].get_peer(receiver_id)
+    if not target_user:
+        print(f"User {receiver_id} not found.")
+        return
+
+    unicast_message(message, target_user["ip"])
+    user_profile["peer_table"].unfollow(receiver_id)
+    print(f"You unfollowed {receiver_id}")
+
+def handle_dm_command(args, user_profile):
+    """
+    SENDS A DM
+    """
+    if len(args) < 2:
+        print("Usage: /dm <user_id> <message>")
+        return
+
+    receiver_id = args[0]
+    message_content = " ".join(args[1:])
+    token = get_valid_token("chat", user_profile)
+    sender_id = user_profile["user_id"]
+
+    peer = user_profile["peer_table"].get_peer(receiver_id)
+    if not peer:
+        print(f"Unknown peer: {receiver_id}")
+        return
+    
+    message = build_dm_message(sender_id, receiver_id, message_content, token)
+    unicast_message(message, peer["ip"])
+    print(f"DM sent to {receiver_id}")
+
+def handle_like_command(args, user_profile):
+    if len(args) != 2:
+        print("Usage: /like <user@ip> <post_timestamp>")
+        return
+
+    receiver_id, ts_str = args
+    try:
+        post_timestamp = int(ts_str)
+    except ValueError:
+        print("Invalid timestamp.")
+        return
+
+    key = (receiver_id, post_timestamp)
+    liked_posts = user_profile.setdefault("liked_posts", set())
+
+    # Determine action: LIKE or UNLIKE
+    if key in liked_posts:
+        action = "UNLIKE"
+        liked_posts.remove(key)
+    else:
+        action = "LIKE"
+        liked_posts.add(key)
+
+    token = get_valid_token("broadcast", user_profile)
+    message = build_like_message(
+        user_profile["user_id"],
+        receiver_id,
+        post_timestamp,
+        action,
+        token,
+    )
+
+    to_ip = receiver_id.split("@")[1]
+    send_message(message, to_ip)
+
+    action_verb = "liked" if action == "LIKE" else "unliked"
+    print(f"You {action_verb} {receiver_id.split('@')[0]}'s post from {post_timestamp}")

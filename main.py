@@ -28,13 +28,17 @@ def main():
     logger = Logger(verbose=args.verbose)
     ip = args.ip
     user_id = f"{args.username}@{ip}"
+    peer_table.own_id = user_id
 
     user_profile = {
         "username": args.username,
         "status": args.status,
         "ip": ip,
         "user_id": user_id,
+        "peer_table": peer_table,
         "logger": logger,
+        "recent_posts": {},
+        "user_likes": set(),
     }
 
     last_profile_time = 0
@@ -69,8 +73,9 @@ def main():
     def on_receive(msg, addr):
         if addr[0] == ip:
             return  # Ignore own broadcast
-        logger.recv(msg, addr[0])
-        dispatch_message(msg, addr[0], peer_table, logger)
+        if logger.verbose:
+            logger.recv(msg, addr[0])
+        dispatch_message(msg, addr[0], user_profile)
 
     threading.Thread(target=user_discovery, daemon=True).start()
     threading.Thread(target=interactive_input, daemon=True).start()

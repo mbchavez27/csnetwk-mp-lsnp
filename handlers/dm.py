@@ -1,16 +1,53 @@
-# TODO: Implement DM (Direct Message) handler
+# To Test DM (Direct Messaging):
 #
-# This function should handle incoming TYPE: DM messages.
-# see RFC for detailed info
+# 1. Open two terminals.
 #
-# Expected fields:
-# - TYPE: DM
-# - FROM: <string>            # Sender's user_id (e.g., username@ipaddress)
-# - TO: <string>              # Receiver's user_id 
-# - CONTENT: <string>         
-# - TIMESTAMP: 
-# - MESSAGE_ID: <string>      # Unique ID 
-# - TOKEN: <string>           # Format: user_id|timestamp|chat (hardcoded for now)
+#    Terminal 1:
+#     python main.py --ip 127.0.0.2 --username Bella --status Hello --verbose
 #
-# NOTE: use (if logger and logger.verbose:) for conditional verbose logging
-# add your commands in commands.py and call handlers in dispatcher.py
+#    Terminal 2:
+#     python main.py --ip 127.0.0.3 --username Edward --status Online --verbose
+#
+# 2. From Bella’s prompt:
+#     /dm Edward@127.0.0.3 Hey Edward, this is Bella!
+#
+# 3. Expected Output:
+#    - Terminal 1 (Bella):
+#        DM SENT to Edward@127.0.0.3: Hey Edward, this is Bella!
+#
+#    - Terminal 2 (Edward):
+#        [DM] Bella: Hey Edward, this is Bella!
+
+import time
+import secrets
+from tokens.validator import validate_token
+
+def build_dm_message(sender_id: str, receiver_id: str, content: str, token: str) -> str:
+    timestamp = int(time.time())
+    message_id = secrets.token_hex(8)
+
+    return f"""TYPE: DM
+FROM: {sender_id}
+TO: {receiver_id}
+CONTENT: {content}
+TIMESTAMP: {timestamp}
+MESSAGE_ID: {message_id}
+TOKEN: {token}
+    
+"""
+
+def handle_dm(message: dict, peer_table, logger =None):
+    sender_id = message.get("FROM")
+    content = message.get("CONTENT", "")
+    token = message.get("TOKEN")
+
+    if not validate_token(token, expected_scope="chat"):
+        if logger:
+            logger.warn(f"Invalid DM token from {sender_id}")
+        return
+    
+    display_name = peer_table.get_name(sender_id)
+    print(f"[DM] {display_name}: {content}")
+
+    if logger and logger.verbose:
+        logger.debug(f"[VERBOSE LOG] Received DM\n{message}")
