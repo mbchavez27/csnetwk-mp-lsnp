@@ -3,6 +3,8 @@ from utils.formatter import format_message
 from handlers.file_transfer import build_file_offer, build_file_chunk
 from network.sender import send_message
 from tokens.tokens_utils import get_valid_token
+from handlers.follow import build_follow_message, build_unfollow_message
+from handlers.dm import build_dm_message
 
 def handle_user_command(input_str, user_profile):
     """
@@ -25,11 +27,11 @@ def handle_user_command(input_str, user_profile):
     elif command == "/post":
         pass
     elif command == "/dm":
-        pass
+        handle_dm_command(args, user_profile)
     elif command == "/follow":
-        pass
+        handle_follow_command(args, user_profile)
     elif command == "/unfollow":
-        pass
+        handle_unfollow_command(args, user_profile)
     # 
     # add your commands
     #
@@ -152,3 +154,57 @@ def handle_sendfile_command(args, user_profile):
         user_profile["logger"].send(chunk_msg, to_ip)
 
     print(f"File '{filename}' sent to {to_id} in {total_chunks} chunks.")
+
+def handle_follow_command(args, user_profile):
+    """
+    SENDS A FOLLOW MESSAGE TO THE USER.
+    """
+    if not args:
+        print("Usage: /follow user_id")
+        return
+
+    receiver_id = args[0]
+    sender_id = user_profile["user_id"]
+
+    message = build_follow_message(sender_id, receiver_id)
+
+    target_user = user_profile["peer_table"].get(receiver_id)
+    if not target_user:
+        print(f"User{receiver_id} not found.")
+        return
+    print(f"You followed {receiver_id}")
+
+
+def handle_unfollow_command(args, user_profile):
+    """
+    SENDS AN UNFOLLOW MESSAGE TO THE USER.
+    """
+    if not args:
+        print("Usage: /follow user_id")
+        return
+
+    receiver_id = args[0]
+    sender_id = user_profile["user_id"]
+
+    message = build_follow_message(sender_id, receiver_id)
+
+    target_user = user_profile["peer_table"].get(receiver_id)
+    if not target_user:
+        print(f"User{receiver_id} not found.")
+        return
+    print(f"You unfollowed {receiver_id}")
+
+def handle_dm_command(args, user_profile):
+    """
+    SENDS A DM
+    """
+    if len(args) < 2:
+        print("Usage: /dm user_id message")
+        return
+
+    receiver_id = args[0]
+    message_content = " ".join(args[1:])
+    sender_id = user_profile["user_id"]
+
+    message = build_dm_message(sender_id, receiver_id, message_content)
+    print(f"DM sent to {receiver_id}")
