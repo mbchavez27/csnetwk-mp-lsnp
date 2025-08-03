@@ -1,3 +1,33 @@
+# To Test FOLLOW / UNFOLLOW:
+#
+# 1. Open two terminals.
+#
+#    Terminal 1:
+#     python main.py --ip 127.0.0.2 --username Bella --status Hello --verbose
+#
+#    Terminal 2:
+#     python main.py --ip 127.0.0.3 --username Edward --status Online --verbose
+#
+# 2. From Bella’s prompt:
+#     /follow Edward@127.0.0.3
+#
+# 3. Expected Output:
+#    - Terminal 1 (Bella):
+#        You followed Edward@127.0.0.3
+#
+#    - Terminal 2 (Edward):
+#        [FOLLOW] User Bella has followed you
+#
+# 4. To Unfollow:
+#     /unfollow Edward@127.0.0.3
+#
+# 5. Expected Output:
+#    - Terminal 1:
+#        You unfollowed Edward@127.0.0.3
+#
+#    - Terminal 2:
+#        [FOLLOW] User Bella has unfollowed you
+
 import time
 import secrets
 from tokens.validator import validate_token
