@@ -173,7 +173,7 @@ def handle_follow_command(args, user_profile):
     SENDS A FOLLOW MESSAGE TO THE USER.
     """
     if not args:
-        print("Usage: /follow user_id")
+        print("Usage: /follow <user_id>")
         return
 
     receiver_id = args[0]
@@ -195,7 +195,7 @@ def handle_unfollow_command(args, user_profile):
     SENDS AN UNFOLLOW MESSAGE TO THE USER.
     """
     if not args:
-        print("Usage: /unfollow user_id")
+        print("Usage: /unfollow <user_id>")
         return
 
     receiver_id = args[0]
@@ -217,12 +217,19 @@ def handle_dm_command(args, user_profile):
     SENDS A DM
     """
     if len(args) < 2:
-        print("Usage: /dm user_id message")
+        print("Usage: /dm <user_id> <message>")
         return
 
     receiver_id = args[0]
     message_content = " ".join(args[1:])
+    token = get_valid_token("chat", user_profile)
     sender_id = user_profile["user_id"]
 
-    message = build_dm_message(sender_id, receiver_id, message_content)
+    peer = user_profile["peer_table"].get_peer(receiver_id)
+    if not peer:
+        print(f"Unknown peer: {receiver_id}")
+        return
+    
+    message = build_dm_message(sender_id, receiver_id, message_content, token)
+    unicast_message(message, peer["ip"])
     print(f"DM sent to {receiver_id}")
