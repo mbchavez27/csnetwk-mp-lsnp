@@ -6,6 +6,7 @@ from tokens.tokens_utils import get_valid_token
 from handlers.follow import build_follow_message, build_unfollow_message
 from handlers.dm import build_dm_message
 from handlers.post import build_post_message
+from handlers.like import build_like_message
 from network.sender import unicast_message, broadcast_message
 
 def handle_user_command(input_str, user_profile):
@@ -34,9 +35,8 @@ def handle_user_command(input_str, user_profile):
         handle_follow_command(args, user_profile)
     elif command == "/unfollow":
         handle_unfollow_command(args, user_profile)
-    # 
-    # add your commands
-    #
+    elif command == "/like":
+        handle_like_command(args, user_profile)
     elif command == "/sendfile":
         handle_sendfile_command(args, user_profile)
     elif command == "/help":
@@ -165,8 +165,19 @@ def handle_post_command(args, user_profile):
     content = " ".join(args)
     token = get_valid_token("broadcast", user_profile)
     user_id = user_profile["user_id"]
-    message = build_post_message(user_id, content, token)
-    broadcast_message(message, user_profile["ip"])
+
+    message_str = build_post_message(user_id, content, token)
+    
+    msg_dict = {}
+    for line in message_str.strip().splitlines():
+        if ":" in line:
+            key, value = line.split(":", 1)
+            msg_dict[key.strip()] = value.strip()
+
+    key = (msg_dict["USER_ID"], int(msg_dict["TIMESTAMP"]))
+    user_profile["recent_posts"][key] = msg_dict["CONTENT"]
+
+    broadcast_message(message_str, user_profile["ip"])
 
 def handle_follow_command(args, user_profile):
     """
@@ -233,3 +244,41 @@ def handle_dm_command(args, user_profile):
     message = build_dm_message(sender_id, receiver_id, message_content, token)
     unicast_message(message, peer["ip"])
     print(f"DM sent to {receiver_id}")
+
+def handle_like_command(args, user_profile):
+    if len(args) != 2:
+        print("Usage: /like <user@ip> <post_timestamp>")
+        return
+
+    receiver_id, ts_str = args
+    try:
+        post_timestamp = int(ts_str)
+    except ValueError:
+        print("Invalid timestamp.")
+        return
+
+    key = (receiver_id, post_timestamp)
+    liked_posts = user_profile.setdefault("liked_posts", set())
+
+    # Determine action: LIKE or UNLIKE
+    if key in liked_posts:
+        action = "UNLIKE"
+        liked_posts.remove(key)
+    else:
+        action = "LIKE"
+        liked_posts.add(key)
+
+    token = get_valid_token("broadcast", user_profile)
+    message = build_like_message(
+        user_profile["user_id"],
+        receiver_id,
+        post_timestamp,
+        action,
+        token,
+    )
+
+    to_ip = receiver_id.split("@")[1]
+    send_message(message, to_ip)
+
+    action_verb = "liked" if action == "LIKE" else "unliked"
+    print(f"You {action_verb} {receiver_id.split('@')[0]}'s post from {post_timestamp}")

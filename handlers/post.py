@@ -8,11 +8,12 @@ USER_ID: {user_id}
 CONTENT: {content}
 TTL: {ttl}
 MESSAGE_ID: {secrets.token_hex(8)}
+TIMESTAMP: {str(int(time.time()))}
 TOKEN: {token}
 
 """
 
-def handle_post(message: dict, peer_table, logger=None):
+def handle_post(message: dict, peer_table, user_profile, logger=None):
     user_id = message.get("USER_ID")
     content = message.get("CONTENT", "")
     token = message.get("TOKEN")
@@ -27,6 +28,12 @@ def handle_post(message: dict, peer_table, logger=None):
     
     display_name = peer_table.get_name(user_id)
     print(f"[POST] {display_name}: {content}")
+
+    if "TIMESTAMP" in message and "CONTENT" in message and "USER_ID" in message:
+        key = (message["USER_ID"], int(message["TIMESTAMP"]))
+        user_profile["recent_posts"][key] = message["CONTENT"]
+        if logger:
+            logger.debug(f"[DEBUG] Stored post from {message['USER_ID']} at {message['TIMESTAMP']}")
 
     if logger and logger.verbose:
         logger.debug(f"[VERBOSE LOG] Received POST:\n{message}")

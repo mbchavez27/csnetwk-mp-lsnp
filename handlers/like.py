@@ -1,41 +1,45 @@
-# TODO: Implement LIKE message handling in like.py
-# see RFC for detailed info
-# 
-# NOTE: use (if logger and logger.verbose:) for conditional verbose logging
-#     : tokens can be hardcoded for now
-# add your commands in commands.py and call handlers in dispatcher.py
-
 import time
 import secrets
+from tokens.validator import validate_token
 
-def build_like_message (sender_id: str, receiver_id: str, post_timestamp: int, action="LIKE", ttl=3600):
-    timestamp = int(time.time())
-    expires = timestamp + ttl
-    token = f"{sender_id}|{expires}|broadcast"
-    message_id = secrets.token_hex(8)
-
+def build_like_message (sender_id: str, receiver_id: str, post_timestamp: int, action, token: str) -> str:
     return f"""TYPE: LIKE
-MESSAGE_ID: {message_id}
 FROM: {sender_id}
 TO: {receiver_id}
 POST_TIMESTAMP: {post_timestamp}
-ACTION: {action}
-TIMESTAMP: {timestamp}
+ACTION: {action.upper()}
+TIMESTAMP: {int(time.time())}
 TOKEN: {token}
 
 """
 
-def handle_like(message:dict, peer_table, logger =None):
+def handle_like(message:dict, peer_table, user_profile, logger =None):
     sender_id = message.get("FROM")
+    receiver_id = message.get("TO")
     post_timestamp = message.get("POST_TIMESTAMP")
-    action = message.get("ACTION", "LIKE")
+    action = message.get("ACTION")
+    token = message.get("TOKEN")
 
-    display_name = peer_table.get(sender_id, sender_id)
+    if not validate_token(token, expected_scope="broadcast"):
+        if logger:
+            logger.warning(f"[LIKE] Invalid token from {sender_id}")
+        return
+
+    if receiver_id != peer_table.own_id:
+        return
+
+    logger.debug(f"[DEBUG] recent_posts keys: {list(user_profile['recent_posts'].keys())}")
+    key = (message["TO"], int(message["POST_TIMESTAMP"]))
+    logger.debug(f"[DEBUG] Looking up key: {key}")
+    content = user_profile["recent_posts"].get(key, "[unknown message]")
+
+
+    display_name = peer_table.get_name(sender_id)
 
     if action == "LIKE":
-        print(f"{display_name} likes your post [post{post_timestamp}]")
+        print(f"{display_name} likes your post [post{content}]")
     elif action == "UNLIKE":
-        print(f"{display_name} unliked your post [post{post_timestamp}]")
+        print(f"{display_name} unliked your post [post{content}]")
     else:
         print(f"Unknown action in LIKE message: {action}")
 

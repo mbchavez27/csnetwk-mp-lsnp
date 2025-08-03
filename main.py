@@ -37,6 +37,8 @@ def main():
         "user_id": user_id,
         "peer_table": peer_table,
         "logger": logger,
+        "recent_posts": {},
+        "user_likes": set(),
     }
 
     last_profile_time = 0
@@ -73,7 +75,7 @@ def main():
             return  # Ignore own broadcast
         if logger.verbose:
             logger.recv(msg, addr[0])
-        dispatch_message(msg, addr[0], peer_table, logger)
+        dispatch_message(msg, addr[0], user_profile)
 
     threading.Thread(target=user_discovery, daemon=True).start()
     threading.Thread(target=interactive_input, daemon=True).start()
