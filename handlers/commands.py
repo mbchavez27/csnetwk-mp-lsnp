@@ -50,6 +50,8 @@ def handle_user_command(input_str, user_profile):
         handle_group_update_command(args, user_profile)
     elif command == "/group_msg":
         handle_group_message_command(args, user_profile)
+    elif command == "/info":
+        handle_info_command(user_profile)
     else:
         print(f"Unknown command: {command}. Type `/help` for available commands.")
 
@@ -430,3 +432,41 @@ def handle_group_message_command(args, user_profile):
         user_profile["logger"].send(msg, ip)
 
     print(f"[GROUP_MESSAGE] Sent to group '{group_name}': {content}")
+
+def handle_info_command(user_profile):
+    peer_table = user_profile["peer_table"]
+
+    print("\n=== USER INFO ===")
+    print(f"User ID   : {user_profile['user_id']}")
+    print(f"Username  : {user_profile['username']}")
+    print(f"Status    : {user_profile['status']}")
+    print(f"IP        : {user_profile['ip']}")
+
+    print("\nPeers:")
+    for uid, info in peer_table.all_peers().items():
+        name = info.get("name", uid.split("@")[0])
+        status = info.get("status", "No status")
+        print(f"{uid} | {name} | {status}")
+
+    print("\nFollowing:")
+    for f in sorted(peer_table.following):
+        print(f)
+
+    print("\nFollowers:")
+    for f in sorted(peer_table.followers):
+        print(f)
+
+    print("\nRecent Posts:")
+    for (uid, ts), content in user_profile["recent_posts"].items():
+        print(f"{uid} at {ts}: {content}")
+
+    print("\nGroups:")
+    groups = user_profile.get("groups", {})
+    if not groups:
+        print("Not a member of any groups")
+    else:
+        for group_name, group_data in groups.items():
+            members = group_data.get("members", [])
+            print(f"{group_name} | Members: {', '.join(members)}")
+
+    print("====================\n")
