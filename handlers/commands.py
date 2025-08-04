@@ -310,12 +310,17 @@ def handle_group_create_command(args, user_profile):
         return
 
     group_name = args[0]
-    members = [m.strip() for arg in args[1:] for m in arg.split(",") if m.strip()]
+    input_members = [m.strip() for arg in args[1:] for m in arg.split(",") if m.strip()]
     from_id = user_profile["user_id"]
-    token = user_profile.get("token", "default_token")
+    # to ensure creator is part of the members list
+    members = list(set(input_members + [from_id]))
+    token = get_valid_token("group", user_profile)
 
     local_groups = user_profile.setdefault("groups", {})
-    local_groups[group_name] = {"members": members}
+    local_groups[group_name] = {
+        "creator": from_id, 
+        "members": members
+    }
 
     msg = {
         "TYPE": "GROUP_CREATE",
@@ -351,6 +356,13 @@ def handle_group_update_command(args, user_profile):
         print("Invalid action. Use 'add' or 'remove'")
         return
 
+    local_groups = user_profile.setdefault("groups", {})
+    group = local_groups.get(group_name)
+
+    if not group:
+        print(f"[GROUP_UPDATE] Group '{group_name}' does not exist.")
+        return
+    
     msg = {
         "TYPE": "GROUP_UPDATE",
         "GROUP_NAME": group_name,
@@ -360,22 +372,24 @@ def handle_group_update_command(args, user_profile):
         "TOKEN": token,
     }
 
-    for member in members:
+    # Send to all current group members (including the ones being removed)
+    all_targets = set(group["members"])
+    all_targets.add(from_id)
+    
+    for member in all_targets:
+        if member == from_id:
+            continue
         ip = member.split("@")[1]
         send_message(format_message(msg), ip)
         user_profile["logger"].send(msg, ip)
 
     # Update local group info
-    local_groups = user_profile.setdefault("groups", {})
-    if group_name in local_groups:
-        if action == "ADD":
-            for m in members:
-                if m not in local_groups[group_name]["members"]:
-                    local_groups[group_name]["members"].append(m)
-        elif action == "REMOVE":
-            local_groups[group_name]["members"] = [
-                m for m in local_groups[group_name]["members"] if m not in members
-            ]
+    if action == "ADD":
+        for m in members:
+            if m not in group["members"]:
+                group["members"].append(m)
+    elif action == "REMOVE":
+        group["members"] = [m for m in group["members"] if m not in members]
 
     print(
         f"[GROUP_UPDATE] Group '{group_name}' updated ({action}): {', '.join(members)}"
