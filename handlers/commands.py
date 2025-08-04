@@ -4,6 +4,7 @@ from utils.formatter import format_message
 from handlers.file_transfer import build_file_offer, build_file_chunk
 from network.sender import send_message
 from tokens.tokens_utils import get_valid_token
+from tokens.generator import generate_token
 from handlers.follow import build_follow_message, build_unfollow_message
 from handlers.dm import build_dm_message
 from handlers.post import build_post_message
@@ -404,6 +405,7 @@ def handle_group_message_command(args, user_profile):
         "FROM": from_id,
         "MESSAGE": base64.b64encode(content.encode()).decode(),
         "TOKEN": token,
+        "ID": generate_token(user_profile["user_id"], 60, "group_msg"),
     }
 
     for member in group_info["members"]:

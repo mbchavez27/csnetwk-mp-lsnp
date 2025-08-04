@@ -106,6 +106,15 @@ def handle_group_message(msg_dict, sender_ip, user_profile, send_message):
     group_name = msg_dict.get("GROUP_NAME")
     message = msg_dict.get("MESSAGE")
     from_user = msg_dict.get("FROM")
+    msg_id = msg_dict.get("ID") or msg_dict.get("TOKEN")
+
+    seen = user_profile.setdefault("user_seen_tokens", set())
+    if msg_id in seen:
+        return
+    seen.add(msg_id)
+
+    if len(seen) > 1000:
+        seen.clear()
 
     group_table = user_profile.get("groups", {})
     group = group_table.get(group_name)
@@ -129,8 +138,15 @@ def handle_group_message(msg_dict, sender_ip, user_profile, send_message):
             decoded = "[invalid base64]"
         logger.debug(f"[GROUP_MESSAGE] {from_user} → {group_name}: {decoded}")
 
+    try:
+        decoded = base64.b64decode(message).decode()
+    except Exception:
+        decoded = "[invalid base64]"
+
+    print(f"[{group_name}] {from_user.split('@')[0]}: {decoded}")
+
     for peer in group["members"]:
-        if peer == from_user:
+        if peer == from_user or peer == user_profile["user_id"]:
             continue
         _, ip = peer.split("@")
         send_message(
@@ -140,6 +156,7 @@ def handle_group_message(msg_dict, sender_ip, user_profile, send_message):
                     "FROM": from_user,
                     "GROUP_NAME": group_name,
                     "MESSAGE": message,
+                    "ID": msg_id,
                 }
             ),
             ip,
