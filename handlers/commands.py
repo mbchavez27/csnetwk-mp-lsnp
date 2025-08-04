@@ -1,13 +1,16 @@
+import base64
 import os
 from utils.formatter import format_message
 from handlers.file_transfer import build_file_offer, build_file_chunk
 from network.sender import send_message
 from tokens.tokens_utils import get_valid_token
+from tokens.generator import generate_token
 from handlers.follow import build_follow_message, build_unfollow_message
 from handlers.dm import build_dm_message
 from handlers.post import build_post_message
 from handlers.like import build_like_message
 from network.sender import unicast_message, broadcast_message
+
 
 def handle_user_command(input_str, user_profile):
     """
@@ -41,6 +44,12 @@ def handle_user_command(input_str, user_profile):
         handle_sendfile_command(args, user_profile)
     elif command == "/help":
         handle_help_command()
+    elif command == "/group_create":
+        handle_group_create_command(args, user_profile)
+    elif command == "/group_update":
+        handle_group_update_command(args, user_profile)
+    elif command == "/group_msg":
+        handle_group_message_command(args, user_profile)
     else:
         print(f"Unknown command: {command}. Type `/help` for available commands.")
 
@@ -61,11 +70,13 @@ def handle_profile_command(args, user_profile):
             updated = True
 
     if updated:
-        print(f"Profile updated: name='{user_profile['username']}' status='{user_profile['status']}'")
+        print(
+            f"Profile updated: name='{user_profile['username']}' status='{user_profile['status']}'"
+        )
         if "profile_updated" in user_profile:
             user_profile["profile_updated"].set()
     else:
-        print("Usage: /profile name=\"Your Name\" status=\"Your status\"")
+        print('Usage: /profile name="Your Name" status="Your status"')
 
 
 def handle_status_command(args, context):
@@ -80,6 +91,7 @@ def handle_status_command(args, context):
     print(f"Status updated to: '{new_status}'")
     if "profile_updated" in context:
         context["profile_updated"].set()
+
 
 def handle_verbose_command(args, user_profile):
     if not args:
@@ -100,10 +112,11 @@ def handle_verbose_command(args, user_profile):
     else:
         print("Invalid option. Use /verbose on|off")
 
+
 def handle_help_command():
     print("Available commands:")
-    print("  /profile name=\"Your Name\" status=\"Your status\"")
-    print("  /status  Exploring LSNP!")    
+    print('  /profile name="Your Name" status="Your status"')
+    print("  /status  Exploring LSNP!")
     print("  /sendfile <user@ip> <file_path>")
     print("  /help")
 
@@ -119,14 +132,16 @@ def handle_sendfile_command(args, user_profile):
     if not os.path.exists(file_path):
         print(f"File not found: {file_path}")
         return
-    
+
     token = get_valid_token("file", user_profile)
 
     with open(file_path, "rb") as f:
         file_data = f.read()
 
-    chunk_size = 1000  
-    chunks = [file_data[i:i + chunk_size] for i in range(0, len(file_data), chunk_size)]
+    chunk_size = 1000
+    chunks = [
+        file_data[i : i + chunk_size] for i in range(0, len(file_data), chunk_size)
+    ]
     total_chunks = len(chunks)
     filename = os.path.basename(file_path)
     to_ip = to_id.split("@")[1]
@@ -157,6 +172,7 @@ def handle_sendfile_command(args, user_profile):
 
     print(f"File '{filename}' sent to {to_id} in {total_chunks} chunks.")
 
+
 def handle_post_command(args, user_profile):
     if not args:
         print("Usage: /post <message>")
@@ -167,7 +183,7 @@ def handle_post_command(args, user_profile):
     user_id = user_profile["user_id"]
 
     message_str = build_post_message(user_id, content, token)
-    
+
     msg_dict = {}
     for line in message_str.strip().splitlines():
         if ":" in line:
@@ -178,6 +194,7 @@ def handle_post_command(args, user_profile):
     user_profile["recent_posts"][key] = msg_dict["CONTENT"]
 
     broadcast_message(message_str, user_profile["ip"])
+
 
 def handle_follow_command(args, user_profile):
     """
@@ -201,6 +218,7 @@ def handle_follow_command(args, user_profile):
     user_profile["peer_table"].follow(receiver_id)
     print(f"You followed {receiver_id}")
 
+
 def handle_unfollow_command(args, user_profile):
     """
     SENDS AN UNFOLLOW MESSAGE TO THE USER.
@@ -223,6 +241,7 @@ def handle_unfollow_command(args, user_profile):
     user_profile["peer_table"].unfollow(receiver_id)
     print(f"You unfollowed {receiver_id}")
 
+
 def handle_dm_command(args, user_profile):
     """
     SENDS A DM
@@ -240,10 +259,11 @@ def handle_dm_command(args, user_profile):
     if not peer:
         print(f"Unknown peer: {receiver_id}")
         return
-    
+
     message = build_dm_message(sender_id, receiver_id, message_content, token)
     unicast_message(message, peer["ip"])
     print(f"DM sent to {receiver_id}")
+
 
 def handle_like_command(args, user_profile):
     if len(args) != 2:
@@ -282,3 +302,117 @@ def handle_like_command(args, user_profile):
 
     action_verb = "liked" if action == "LIKE" else "unliked"
     print(f"You {action_verb} {receiver_id.split('@')[0]}'s post from {post_timestamp}")
+
+
+def handle_group_create_command(args, user_profile):
+    if len(args) < 2:
+        print("Usage: /group_create <group_name> <member1@ip1> <member2@ip2> ...")
+        return
+
+    group_name = args[0]
+    members = [m.strip() for arg in args[1:] for m in arg.split(",") if m.strip()]
+    from_id = user_profile["user_id"]
+    token = user_profile.get("token", "default_token")
+
+    local_groups = user_profile.setdefault("groups", {})
+    local_groups[group_name] = {"members": members}
+
+    msg = {
+        "TYPE": "GROUP_CREATE",
+        "GROUP_NAME": group_name,
+        "MEMBERS": ",".join(members),
+        "FROM": from_id,
+        "TOKEN": token,
+    }
+
+    msg_str = format_message(msg)
+
+    for peer in members:
+        try:
+            name, ip = peer.split("@")
+            user_profile["logger"].send(msg_str, ip)
+            send_message(msg_str, ip)
+        except ValueError:
+            print(f"Invalid member format: {peer} (should be name@ip)")
+
+
+def handle_group_update_command(args, user_profile):
+    if len(args) < 3:
+        print("Usage: /group_update <group_name> <add|remove> <user@ip> ...")
+        return
+
+    group_name = args[0]
+    action = args[1].upper()
+    members = args[2:]
+    from_id = user_profile["user_id"]
+    token = get_valid_token("group", user_profile)
+
+    if action not in ("ADD", "REMOVE"):
+        print("Invalid action. Use 'add' or 'remove'")
+        return
+
+    msg = {
+        "TYPE": "GROUP_UPDATE",
+        "GROUP_NAME": group_name,
+        "ACTION": action,
+        "MEMBERS": ",".join(members),
+        "FROM": from_id,
+        "TOKEN": token,
+    }
+
+    for member in members:
+        ip = member.split("@")[1]
+        send_message(format_message(msg), ip)
+        user_profile["logger"].send(msg, ip)
+
+    # Update local group info
+    local_groups = user_profile.setdefault("groups", {})
+    if group_name in local_groups:
+        if action == "ADD":
+            for m in members:
+                if m not in local_groups[group_name]["members"]:
+                    local_groups[group_name]["members"].append(m)
+        elif action == "REMOVE":
+            local_groups[group_name]["members"] = [
+                m for m in local_groups[group_name]["members"] if m not in members
+            ]
+
+    print(
+        f"[GROUP_UPDATE] Group '{group_name}' updated ({action}): {', '.join(members)}"
+    )
+
+
+def handle_group_message_command(args, user_profile):
+    if len(args) < 2:
+        print("Usage: /group_msg <group_name> <message>")
+        return
+
+    group_name = args[0]
+    content = " ".join(args[1:])
+    from_id = user_profile["user_id"]
+    token = get_valid_token("group", user_profile)
+
+    local_groups = user_profile.setdefault("groups", {})
+    group_info = local_groups.get(group_name)
+
+    if not group_info:
+        print(f"[ERROR] Group '{group_name}' not found.")
+        return
+
+    msg = {
+        "TYPE": "GROUP_MESSAGE",
+        "GROUP_NAME": group_name,
+        "FROM": from_id,
+        "MESSAGE": base64.b64encode(content.encode()).decode(),
+        "TOKEN": token,
+        "ID": generate_token(user_profile["user_id"], 60, "group_msg"),
+    }
+
+    for member in group_info["members"]:
+        if member == from_id:
+            continue
+        ip = member.split("@")[1]
+        send_message(format_message(msg), ip)
+        user_profile["logger"].send(msg, ip)
+
+    print(f"[GROUP_MESSAGE] Sent to group '{group_name}': {content}")

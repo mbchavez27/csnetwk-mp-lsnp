@@ -14,12 +14,15 @@ from utils.peers import PeerTable
 from tokens.generator import generate_token
 
 peer_table = PeerTable()
-BROADCAST_INTERVAL = 300 
+BROADCAST_INTERVAL = 300
 PORT = 50999
+
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ip", default=get_own_ip(), help="The simulated peer IP (e.g., 127.0.0.2)") # for testing on own terminals for now
+    parser.add_argument(
+        "--ip", default=get_own_ip(), help="The simulated peer IP (e.g., 127.0.0.2)"
+    )  # for testing on own terminals for now
     parser.add_argument("--username", required=True)
     parser.add_argument("--status", default="Exploring LSNP!")
     parser.add_argument("--verbose", action="store_true")
@@ -39,6 +42,7 @@ def main():
         "logger": logger,
         "recent_posts": {},
         "user_likes": set(),
+        "groups": {},
     }
 
     last_profile_time = 0
@@ -57,10 +61,10 @@ def main():
                 last_profile_time = now
             else:
                 msg = build_ping_message(user_id)
-            
+
             broadcast_message(msg, ip)
             logger.send(msg, "<broadcast>")
-            time.sleep(BROADCAST_INTERVAL) 
+            time.sleep(BROADCAST_INTERVAL)
 
     def interactive_input():
         while True:
@@ -81,6 +85,7 @@ def main():
     threading.Thread(target=interactive_input, daemon=True).start()
 
     listen_for_messages(on_receive, ip)
+
 
 if __name__ == "__main__":
     main()

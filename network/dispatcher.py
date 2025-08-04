@@ -1,6 +1,7 @@
-from handlers import profile, ping, post, file_transfer, post, dm, follow, like
+from handlers import profile, ping, post, file_transfer, post, dm, follow, like, group
 from utils.parser import parse_message
 from network.sender import send_message
+
 
 def dispatch_message(message: str, sender_ip: str, user_profile):
     peer_table = user_profile["peer_table"]
@@ -12,8 +13,8 @@ def dispatch_message(message: str, sender_ip: str, user_profile):
     claimed_ip = from_field.split("@")[-1] if "@" in from_field else None
 
     # Safety Considerations
-    #SAFE_TYPES = {"PING", "PROFILE"}
-    #if msg_type not in SAFE_TYPES:
+    # SAFE_TYPES = {"PING", "PROFILE"}
+    # if msg_type not in SAFE_TYPES:
     #    if claimed_ip != sender_ip:
     #        warning = f"[SECURITY] Claimed IP ({claimed_ip}) ≠ sender IP ({sender_ip})"
     #        if logger:
@@ -21,7 +22,7 @@ def dispatch_message(message: str, sender_ip: str, user_profile):
     #        else:
     #            print(warning)
     #        return
-        
+
     if msg_type == "PROFILE":
         profile.handle_PROFILE(msg_dict, sender_ip, peer_table, logger)
     elif msg_type == "PING":
@@ -49,10 +50,10 @@ def dispatch_message(message: str, sender_ip: str, user_profile):
     elif msg_type == "LIKE":
         like.handle_like(msg_dict, peer_table, user_profile, logger)
     elif msg_type == "GROUP_CREATE":
-        pass
+        group.handle_group_create(msg_dict, sender_ip, user_profile, send_message)
     elif msg_type == "GROUP_UPDATE":
-        pass
+        group.handle_group_update(msg_dict, sender_ip, user_profile, send_message)
     elif msg_type == "GROUP_MESSAGE":
-        pass
+        group.handle_group_message(msg_dict, sender_ip, user_profile, send_message)
     else:
         print(f"[DISPATCH] Unknown message type: {msg_type}")
