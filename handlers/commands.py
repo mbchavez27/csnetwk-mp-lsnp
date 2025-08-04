@@ -305,13 +305,16 @@ def handle_like_command(args, user_profile):
 
 def handle_group_create_command(args, user_profile):
     if len(args) < 2:
-        print("Usage: /group_create <group_name> <user@ip> ...")
+        print("Usage: /group_create <group_name> <member1@ip1> <member2@ip2> ...")
         return
 
     group_name = args[0]
-    members = args[1:]
+    members = [m.strip() for arg in args[1:] for m in arg.split(",") if m.strip()]
     from_id = user_profile["user_id"]
-    token = get_valid_token("group", user_profile)
+    token = user_profile.get("token", "default_token")
+
+    local_groups = user_profile.setdefault("groups", {})
+    local_groups[group_name] = {"members": members}
 
     msg = {
         "TYPE": "GROUP_CREATE",
@@ -321,19 +324,15 @@ def handle_group_create_command(args, user_profile):
         "TOKEN": token,
     }
 
-    user_profile.setdefault("groups", {})[group_name] = {
-        "creator": from_id,
-        "members": list(set(members + [from_id])),
-    }
+    msg_str = format_message(msg)
 
-    for member in members:
-        ip = member.split("@")[1]
-        send_message(format_message(msg), ip)
-        user_profile["logger"].send(msg, ip)
-
-    print(
-        f"[GROUP_CREATE] Created group '{group_name}' with members: {', '.join(members)}"
-    )
+    for peer in members:
+        try:
+            name, ip = peer.split("@")
+            user_profile["logger"].send(msg_str, ip)
+            send_message(msg_str, ip)
+        except ValueError:
+            print(f"Invalid member format: {peer} (should be name@ip)")
 
 
 def handle_group_update_command(args, user_profile):

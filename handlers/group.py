@@ -12,6 +12,9 @@
 # handlers/group.py
 import base64
 from utils.serializer import serialize_message
+from tokens.generator import generate_token
+from utils.formatter import format_message
+from network.sender import send_message
 
 
 def handle_group_create(msg_dict, sender_ip, user_profile, send_message):
@@ -25,13 +28,12 @@ def handle_group_create(msg_dict, sender_ip, user_profile, send_message):
     if not group_name or not from_user:
         return
 
-    group_table = user_profile.setdefault("group_table", {})
+    group_table = user_profile.setdefault("groups", {})
     if group_name in group_table:
         if logger and logger.verbose:
             logger.debug(f"[GROUP_CREATE] Group '{group_name}' already exists.")
         return
 
-    # Add creator
     all_members = list(set(members + [from_user]))
     group_table[group_name] = {"creator": from_user, "members": all_members}
 
@@ -40,18 +42,18 @@ def handle_group_create(msg_dict, sender_ip, user_profile, send_message):
             f"[GROUP_CREATE] Group '{group_name}' created by {from_user} with members: {all_members}"
         )
 
-    # Notify members
     for member in all_members:
         if member == from_user:
             continue
         message = {
-            "TYPE": "GROUP_CREATE_ACK",
+            "TYPE": "GROUP_CREATE",
             "GROUP_NAME": group_name,
             "FROM": sender_id,
             "TO": member,
-            "TOKEN": generate_token(sender_id, "group"),
+            "TOKEN": generate_token(sender_id, 3600, "group"),
         }
-        send_message(serialize_message(message), member)
+        _, target_ip = member.split("@")
+        send_message(serialize_message(message), target_ip)
 
 
 def handle_group_update(msg_dict, sender_ip, user_profile, send_message):
@@ -61,7 +63,7 @@ def handle_group_update(msg_dict, sender_ip, user_profile, send_message):
     from_user = msg_dict.get("FROM")
     members = msg_dict.get("MEMBERS", "").split(",")
 
-    group_table = user_profile.get("group_table", {})
+    group_table = user_profile.get("groups", {})
     group = group_table.get(group_name)
 
     if not group or group["creator"] != from_user:
@@ -88,16 +90,15 @@ def handle_group_update(msg_dict, sender_ip, user_profile, send_message):
         )
 
     for peer in group["members"]:
-        send_message(
-            {
-                "TYPE": "GROUP_UPDATE",
-                "FROM": from_user,
-                "GROUP_NAME": group_name,
-                "ACTION": action,
-                "MEMBERS": ",".join(members),
-            },
-            peer,
-        )
+        msg = {
+            "TYPE": "GROUP_UPDATE",
+            "FROM": from_user,
+            "GROUP_NAME": group_name,
+            "ACTION": action,
+            "MEMBERS": ",".join(members),
+        }
+        _, ip = peer.split("@")
+        send_message(serialize_message(msg), ip)
 
 
 def handle_group_message(msg_dict, sender_ip, user_profile, send_message):
@@ -106,13 +107,18 @@ def handle_group_message(msg_dict, sender_ip, user_profile, send_message):
     message = msg_dict.get("MESSAGE")
     from_user = msg_dict.get("FROM")
 
-    group_table = user_profile.get("group_table", {})
+    group_table = user_profile.get("groups", {})
     group = group_table.get(group_name)
 
-    if not group or from_user not in group["members"]:
+    if not group:
+        if logger and logger.verbose:
+            logger.debug(f"[GROUP_MESSAGE] Group '{group_name}' does not exist.")
+        return
+
+    if from_user not in group["members"]:
         if logger and logger.verbose:
             logger.debug(
-                f"[GROUP_MESSAGE] Sender '{from_user}' not in group '{group_name}'"
+                f"[GROUP_MESSAGE] Unauthorized sender '{from_user}' for group '{group_name}'."
             )
         return
 
@@ -126,12 +132,15 @@ def handle_group_message(msg_dict, sender_ip, user_profile, send_message):
     for peer in group["members"]:
         if peer == from_user:
             continue
+        _, ip = peer.split("@")
         send_message(
-            {
-                "TYPE": "GROUP_MESSAGE",
-                "FROM": from_user,
-                "GROUP_NAME": group_name,
-                "MESSAGE": message,
-            },
-            peer,
+            serialize_message(
+                {
+                    "TYPE": "GROUP_MESSAGE",
+                    "FROM": from_user,
+                    "GROUP_NAME": group_name,
+                    "MESSAGE": message,
+                }
+            ),
+            ip,
         )
