@@ -116,8 +116,19 @@ def handle_help_command():
     print("Available commands:")
     print('  /profile name="Your Name" status="Your status"')
     print("  /status  Exploring LSNP!")
+    print("  /verbose <on|off>")
+    print("  /post <message>")
+    print("  /dm <user@ip> <message>")
+    print("  /follow <user@ip>")
+    print("  /unfollow <user@ip>")
+    print("  /like <user@ip> <post_timestamp>")
     print("  /sendfile <user@ip> <file_path>")
+    print("  /group_create <group_name> <member1@ip> <member2@ip> ...")
+    print("  /group_update <group_name> <add|remove> <member@ip> ...")
+    print("  /group_msg <group_name> <message>")
     print("  /help")
+    print("  /info")
+    print("  /exit")
 
 
 def handle_sendfile_command(args, user_profile):
@@ -197,7 +208,7 @@ def handle_post_command(args, user_profile):
 
 def handle_follow_command(args, user_profile):
     if not args:
-        print("Usage: /follow <user_id>")
+        print("Usage: /follow <user@ip>")
         return
 
     receiver_id = args[0]
@@ -217,7 +228,7 @@ def handle_follow_command(args, user_profile):
 
 def handle_unfollow_command(args, user_profile):
     if not args:
-        print("Usage: /unfollow <user_id>")
+        print("Usage: /unfollow <user@ip>")
         return
 
     receiver_id = args[0]
@@ -237,7 +248,7 @@ def handle_unfollow_command(args, user_profile):
 
 def handle_dm_command(args, user_profile):
     if len(args) < 2:
-        print("Usage: /dm <user_id> <message>")
+        print("Usage: /dm <user@ip> <message>")
         return
 
     receiver_id = args[0]
@@ -296,7 +307,7 @@ def handle_like_command(args, user_profile):
 
 def handle_group_create_command(args, user_profile):
     if len(args) < 2:
-        print("Usage: /group_create <group_name> <member1@ip1> <member2@ip2> ...")
+        print("Usage: /group_create <group_name> <member1@ip> <member2@ip> ...")
         return
 
     group_name = args[0]
@@ -333,7 +344,7 @@ def handle_group_create_command(args, user_profile):
 
 def handle_group_update_command(args, user_profile):
     if len(args) < 3:
-        print("Usage: /group_update <group_name> <add|remove> <user@ip> ...")
+        print("Usage: /group_update <group_name> <add|remove> <member@ip> ...")
         return
 
     group_name = args[0]
