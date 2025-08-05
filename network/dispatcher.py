@@ -55,5 +55,8 @@ def dispatch_message(message: str, sender_ip: str, user_profile):
         group.handle_group_update(msg_dict, sender_ip, user_profile, send_message)
     elif msg_type == "GROUP_MESSAGE":
         group.handle_group_message(msg_dict, sender_ip, user_profile, send_message)
+    elif msg_type == "GROUP_INFO_RESPONSE":
+        group.handle_group_info(msg_dict, sender_ip, user_profile, send_message)
+
     else:
         print(f"[DISPATCH] Unknown message type: {msg_type}")

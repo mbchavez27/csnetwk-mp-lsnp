@@ -50,6 +50,8 @@ def handle_user_command(input_str, user_profile):
         handle_group_update_command(args, user_profile)
     elif command == "/group_msg":
         handle_group_message_command(args, user_profile)
+    elif command == "/info":
+        handle_group_info_command(args, user_profile)
     else:
         print(f"Unknown command: {command}. Type `/help` for available commands.")
 
@@ -118,6 +120,10 @@ def handle_help_command():
     print('  /profile name="Your Name" status="Your status"')
     print("  /status  Exploring LSNP!")
     print("  /sendfile <user@ip> <file_path>")
+    print("  /group_create <group_name> <member1@ip> ...")
+    print("  /group_update <group_name> <add|remove> <user@ip> ...")
+    print("  /group_msg <group_name> <message>")
+    print("  /info <group_name>")
     print("  /help")
 
 
@@ -416,3 +422,45 @@ def handle_group_message_command(args, user_profile):
         user_profile["logger"].send(msg, ip)
 
     print(f"[GROUP_MESSAGE] Sent to group '{group_name}': {content}")
+
+
+def handle_group_info_command(args, user_profile):
+    """
+    Sends a request to retrieve group information.
+    Usage: /info <group_name>
+    """
+    if len(args) != 1:
+        print("Usage: /info <group_name>")
+        return
+
+    group_name = args[0]
+    from_id = user_profile["user_id"]
+    token = get_valid_token("group", user_profile)
+
+    msg = {
+        "TYPE": "GROUP_INFO",
+        "GROUP_NAME": group_name,
+        "FROM": from_id,
+        "TOKEN": token,
+    }
+
+    # Send to all group members if group exists locally, else broadcast
+    local_groups = user_profile.get("groups", {})
+    group = local_groups.get(group_name)
+
+    if group:
+        for member in group.get("members", []):
+            if member == from_id:
+                continue
+            try:
+                _, ip = member.split("@")
+                send_message(format_message(msg), ip)
+                user_profile["logger"].send(msg, ip)
+            except Exception as e:
+                print(f"[ERROR] Failed to send group info request to {member}: {e}")
+    else:
+        # Fallback: broadcast to network
+        print(f"[INFO] Group '{group_name}' not found locally. Broadcasting request.")
+        broadcast_message(format_message(msg), user_profile["ip"])
+
+    print(f"[INFO] Group info request sent for '{group_name}'.")
