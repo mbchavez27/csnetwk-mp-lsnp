@@ -10,9 +10,15 @@ from handlers.dm import build_dm_message
 from handlers.post import build_post_message
 from handlers.like import build_like_message
 from network.sender import unicast_message, broadcast_message
+from tokens.validator import revoke_token
+from handlers.tictactoe import (sendInvite, sendMove, sendResults, active_games, findIP, printBoard, checkWinner)
+import time
+import random
+from handlers.tictactoe import (sendInvite, sendMove, sendResults, active_games, findIP, printBoard, checkWinner)
+import time
+import random
 
-
-def handle_user_command(input_str, user_profile):
+def handle_user_command(input_str, user_profile, peer_table):
     """
     Dispatches a command based on user input.
     """
@@ -42,6 +48,7 @@ def handle_user_command(input_str, user_profile):
         handle_like_command(args, user_profile)
     elif command == "/sendfile":
         handle_sendfile_command(args, user_profile)
+    
     elif command == "/help":
         handle_help_command()
     elif command == "/group_create":
@@ -50,16 +57,24 @@ def handle_user_command(input_str, user_profile):
         handle_group_update_command(args, user_profile)
     elif command == "/group_msg":
         handle_group_message_command(args, user_profile)
+<<<<<<< HEAD
     elif command == "/info":
         handle_group_info_command(args, user_profile)
+=======
+    elif command == "/peer_info":
+        handle_info_command(user_profile)
+    elif command == "/tictactoe":
+        handle_tictactoe_command(args, user_profile, peer_table)
+    elif command == "/move":
+        handle_move_command(args, user_profile, peer_table)
+    elif command == "/exit":
+        handle_exit_command(user_profile)
+>>>>>>> main
     else:
         print(f"Unknown command: {command}. Type `/help` for available commands.")
 
 
 def handle_profile_command(args, user_profile):
-    """
-    Updates display name and/or status.
-    """
     updated = False
     for arg in args:
         if arg.startswith("name="):
@@ -82,9 +97,6 @@ def handle_profile_command(args, user_profile):
 
 
 def handle_status_command(args, context):
-    """
-    Quickly updates just the status.
-    """
     if not args:
         print("Usage: /status Feeling happy!")
         return
@@ -119,12 +131,21 @@ def handle_help_command():
     print("Available commands:")
     print('  /profile name="Your Name" status="Your status"')
     print("  /status  Exploring LSNP!")
+    print("  /verbose <on|off>")
+    print("  /post <message>")
+    print("  /dm <user@ip> <message>")
+    print("  /follow <user@ip>")
+    print("  /unfollow <user@ip>")
+    print("  /like <user@ip> <post_timestamp>")
     print("  /sendfile <user@ip> <file_path>")
-    print("  /group_create <group_name> <member1@ip> ...")
-    print("  /group_update <group_name> <add|remove> <user@ip> ...")
+    print("  /group_create <group_name> <member1@ip> <member2@ip> ...")
+    print("  /group_update <group_name> <add|remove> <member@ip> ...")
     print("  /group_msg <group_name> <message>")
-    print("  /info <group_name>")
+    print("  /tictactoe @username")
+    print("  /move <gameid> <position>")
     print("  /help")
+    print("  /info")
+    print("  /exit")
 
 
 def handle_sendfile_command(args, user_profile):
@@ -203,11 +224,8 @@ def handle_post_command(args, user_profile):
 
 
 def handle_follow_command(args, user_profile):
-    """
-    SENDS A FOLLOW MESSAGE TO THE USER.
-    """
     if not args:
-        print("Usage: /follow <user_id>")
+        print("Usage: /follow <user@ip>")
         return
 
     receiver_id = args[0]
@@ -226,11 +244,8 @@ def handle_follow_command(args, user_profile):
 
 
 def handle_unfollow_command(args, user_profile):
-    """
-    SENDS AN UNFOLLOW MESSAGE TO THE USER.
-    """
     if not args:
-        print("Usage: /unfollow <user_id>")
+        print("Usage: /unfollow <user@ip>")
         return
 
     receiver_id = args[0]
@@ -249,11 +264,8 @@ def handle_unfollow_command(args, user_profile):
 
 
 def handle_dm_command(args, user_profile):
-    """
-    SENDS A DM
-    """
     if len(args) < 2:
-        print("Usage: /dm <user_id> <message>")
+        print("Usage: /dm <user@ip> <message>")
         return
 
     receiver_id = args[0]
@@ -312,16 +324,21 @@ def handle_like_command(args, user_profile):
 
 def handle_group_create_command(args, user_profile):
     if len(args) < 2:
-        print("Usage: /group_create <group_name> <member1@ip1> <member2@ip2> ...")
+        print("Usage: /group_create <group_name> <member1@ip> <member2@ip> ...")
         return
 
     group_name = args[0]
-    members = [m.strip() for arg in args[1:] for m in arg.split(",") if m.strip()]
+    input_members = [m.strip() for arg in args[1:] for m in arg.split(",") if m.strip()]
     from_id = user_profile["user_id"]
-    token = user_profile.get("token", "default_token")
+    # to ensure creator is part of the members list
+    members = list(set(input_members + [from_id]))
+    token = get_valid_token("group", user_profile)
 
     local_groups = user_profile.setdefault("groups", {})
-    local_groups[group_name] = {"members": members}
+    local_groups[group_name] = {
+        "creator": from_id, 
+        "members": members
+    }
 
     msg = {
         "TYPE": "GROUP_CREATE",
@@ -344,7 +361,7 @@ def handle_group_create_command(args, user_profile):
 
 def handle_group_update_command(args, user_profile):
     if len(args) < 3:
-        print("Usage: /group_update <group_name> <add|remove> <user@ip> ...")
+        print("Usage: /group_update <group_name> <add|remove> <member@ip> ...")
         return
 
     group_name = args[0]
@@ -357,6 +374,13 @@ def handle_group_update_command(args, user_profile):
         print("Invalid action. Use 'add' or 'remove'")
         return
 
+    local_groups = user_profile.setdefault("groups", {})
+    group = local_groups.get(group_name)
+
+    if not group:
+        print(f"[GROUP_UPDATE] Group '{group_name}' does not exist.")
+        return
+    
     msg = {
         "TYPE": "GROUP_UPDATE",
         "GROUP_NAME": group_name,
@@ -366,22 +390,24 @@ def handle_group_update_command(args, user_profile):
         "TOKEN": token,
     }
 
-    for member in members:
+    # Send to all current group members (including the ones being removed)
+    all_targets = set(group["members"])
+    all_targets.add(from_id)
+    
+    for member in all_targets:
+        if member == from_id:
+            continue
         ip = member.split("@")[1]
         send_message(format_message(msg), ip)
         user_profile["logger"].send(msg, ip)
 
     # Update local group info
-    local_groups = user_profile.setdefault("groups", {})
-    if group_name in local_groups:
-        if action == "ADD":
-            for m in members:
-                if m not in local_groups[group_name]["members"]:
-                    local_groups[group_name]["members"].append(m)
-        elif action == "REMOVE":
-            local_groups[group_name]["members"] = [
-                m for m in local_groups[group_name]["members"] if m not in members
-            ]
+    if action == "ADD":
+        for m in members:
+            if m not in group["members"]:
+                group["members"].append(m)
+    elif action == "REMOVE":
+        group["members"] = [m for m in group["members"] if m not in members]
 
     print(
         f"[GROUP_UPDATE] Group '{group_name}' updated ({action}): {', '.join(members)}"
@@ -423,44 +449,111 @@ def handle_group_message_command(args, user_profile):
 
     print(f"[GROUP_MESSAGE] Sent to group '{group_name}': {content}")
 
+def handle_info_command(user_profile):
+    peer_table = user_profile["peer_table"]
 
-def handle_group_info_command(args, user_profile):
-    """
-    Sends a request to retrieve group information.
-    Usage: /info <group_name>
-    """
-    if len(args) != 1:
-        print("Usage: /info <group_name>")
-        return
+    print("\n=== PEER INFO ===")
+    print(f"User ID   : {user_profile['user_id']}")
+    print(f"Username  : {user_profile['username']}")
+    print(f"Status    : {user_profile['status']}")
+    print(f"IP        : {user_profile['ip']}")
 
-    group_name = args[0]
-    from_id = user_profile["user_id"]
-    token = get_valid_token("group", user_profile)
+    print("\nPeers:")
+    for uid, info in peer_table.all_peers().items():
+        name = info.get("name", uid.split("@")[0])
+        status = info.get("status", "No status")
+        print(f"{uid} | {name} | {status}")
 
-    msg = {
-        "TYPE": "GROUP_INFO",
-        "GROUP_NAME": group_name,
-        "FROM": from_id,
-        "TOKEN": token,
-    }
+    print("\nFollowing:")
+    for f in sorted(peer_table.following):
+        print(f)
 
-    # Send to all group members if group exists locally, else broadcast
-    local_groups = user_profile.get("groups", {})
-    group = local_groups.get(group_name)
+    print("\nFollowers:")
+    for f in sorted(peer_table.followers):
+        print(f)
 
-    if group:
-        for member in group.get("members", []):
-            if member == from_id:
-                continue
-            try:
-                _, ip = member.split("@")
-                send_message(format_message(msg), ip)
-                user_profile["logger"].send(msg, ip)
-            except Exception as e:
-                print(f"[ERROR] Failed to send group info request to {member}: {e}")
+    print("\nRecent Posts:")
+    for (uid, ts), content in user_profile["recent_posts"].items():
+        print(f"{uid} at {ts}: {content}")
+
+    print("\nGroups:")
+    groups = user_profile.get("groups", {})
+    if not groups:
+        print("Not a member of any groups")
     else:
-        # Fallback: broadcast to network
-        print(f"[INFO] Group '{group_name}' not found locally. Broadcasting request.")
-        broadcast_message(format_message(msg), user_profile["ip"])
+        for group_name, group_data in groups.items():
+            members = group_data.get("members", [])
+            print(f"{group_name} | Members: {', '.join(members)}")
 
-    print(f"[INFO] Group info request sent for '{group_name}'.")
+    print("====================\n")
+
+def handle_tictactoe_command(args, user_profile, peer_table):
+    if len(args) < 1:
+            print("tictactoe @username")
+            return
+        
+    opponent_username = args[0].lstrip("@")
+    opponent_ip = None
+    for user_id, peer in peer_table.peers.items():
+        if user_id.startswith(opponent_username + "@"):
+            opponent_ip = peer.get("ip")
+            break
+
+    if not opponent_ip:
+        print(f"Could not find user {opponent_username}.")
+        return
+        
+    symbol_choice = input("Choose between X or O [X/O]: ").strip().upper()
+    if symbol_choice not in ["X", "O"]:
+        print("Invalid choice. Randomly picking between X or O.")
+        symbol_choice = random.choice(["X", "O"])
+        
+    game_id = f"g{int(time.time())}"
+    sendInvite(game_id, symbol_choice, opponent_ip, user_profile, peer_table)
+    print(f"Game ID: {game_id}")
+
+        
+def handle_move_command(args, user_profile, peer_table):
+    
+    if len(args) < 2:
+        print("move GAMEID POSITION")
+        return
+    game_id = args[0]
+    try:
+        position = int(args[1])
+    except ValueError:
+        print("Position must be a number (0-8).")
+        return
+        
+    if position < 0 or position > 8:
+        print("Invalid number. Use 0-8.")
+        return
+        
+    game = active_games.get(game_id)
+    if not game:
+        print(f"No active game found with ID {game_id}")
+        return
+        
+    opponent_ip = findIP(game, user_profile["user_id"])
+    if not opponent_ip:
+        print("Could not find user.")
+        return
+        
+    matches = [s for s, uid in game["players"].items() if uid == user_profile["user_id"]]
+    user_symbol = matches[0]
+    sendMove(game_id, position, user_symbol, opponent_ip, user_profile, peer_table)
+ 
+    if game["board"][position] == " ":
+        game["board"][position] = user_symbol
+        printBoard(game["board"])
+    else:
+        print("Position already taken.")
+
+
+def handle_exit_command(user_profile):
+    # Revoke tokens
+    for token in user_profile.get("tokens", {}).values():
+        revoke_token(token)
+
+    print("All tokens revoked. Exiting...")
+    exit(0)

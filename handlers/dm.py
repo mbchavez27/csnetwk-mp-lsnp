@@ -1,23 +1,3 @@
-# To Test DM (Direct Messaging):
-#
-# 1. Open two terminals.
-#
-#    Terminal 1:
-#     python main.py --ip 127.0.0.2 --username Bella --status Hello --verbose
-#
-#    Terminal 2:
-#     python main.py --ip 127.0.0.3 --username Edward --status Online --verbose
-#
-# 2. From Bella’s prompt:
-#     /dm Edward@127.0.0.3 Hey Edward, this is Bella!
-#
-# 3. Expected Output:
-#    - Terminal 1 (Bella):
-#        DM SENT to Edward@127.0.0.3: Hey Edward, this is Bella!
-#
-#    - Terminal 2 (Edward):
-#        [DM] Bella: Hey Edward, this is Bella!
-
 import time
 import secrets
 from tokens.validator import validate_token

@@ -4,13 +4,6 @@ import hashlib
 revoked_tokens = set()  
 
 def validate_token(token: str, expected_scope: str) -> bool:
-    """
-    Validates:
-    - Token format (user_id|expires_at|scope)
-    - Expiration (now < expires_at)
-    - Scope matches expected_scope
-    - Not revoked
-    """
     parts = token.strip().split("|")
     if len(parts) != 3:
         return False

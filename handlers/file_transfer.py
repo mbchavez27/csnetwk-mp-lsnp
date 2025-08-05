@@ -1,34 +1,3 @@
-# To Test file transfer:
-#
-# 1. Create a small test file:
-#     echo "hello LSNP" > testfile.txt
-#
-# 2. Open two terminals.
-#
-#    Terminal 1:
-#     python main.py --ip 127.0.0.2 --username Bella --status Hello --verbose
-#
-#    Terminal 2:
-#     python main.py --ip 127.0.0.3 --username Edward --verbose
-#
-# 3. From Bella’s prompt (Terminal 1):
-#     /sendfile Edward@127.0.0.3 testfile.txt
-#
-# Expected Output:
-#    - Terminal 1 (Bella):
-#        [FILE_OFFER] Sending testfile.txt (12 bytes, 1 chunks)
-#        [FILE_CHUNK] Sent chunk 0/1 for testfile.txt to Edward@127.0.0.3
-#        [RECEIVED CONFIRMATION] testfile.txt transfer completed!
-#
-#    - Terminal 2 (Edward):
-#        [FILE_OFFER] Ready to receive testfile.txt (1 chunks)
-#        [FILE_RECEIVED] testfile.txt saved to received_testfile.txt
-#
-# NOTE: use (if logger and logger.verbose:) for conditional verbose logging
-#     : tokens can be hardcoded for now
-# add your commands in commands.py and call handlers in dispatcher.py
-
-import os
 import base64
 from network.sender import send_message
 from tokens.validator import validate_token

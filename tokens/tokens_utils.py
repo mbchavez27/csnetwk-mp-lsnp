@@ -4,10 +4,6 @@ from tokens.validator import validate_token
 DEFAULT_TTL = 3600  
 
 def get_valid_token(scope: str, user_profile: dict, ttl: int = DEFAULT_TTL) -> str:
-    """
-    Returns a valid (non-expired, not revoked) token for the given scope.
-    Reuses existing token in user_profile if valid; otherwise generates new one.
-    """
     tokens = user_profile.setdefault("tokens", {})
     token = tokens.get(scope)
 
