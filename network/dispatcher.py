@@ -44,7 +44,7 @@ def dispatch_message(message: str, sender_ip: str, user_profile):
     elif msg_type == "TICTACTOE_INVITE":
         tictactoe.handleInvite(msg_dict, sender_ip, peer_table, logger)
     elif msg_type == "TICTACTOE_MOVE":
-        tictactoe.handleMove(msg_dict, sender_ip, peer_table, logger)
+        tictactoe.handleMove(msg_dict, sender_ip, user_profile, peer_table, logger)
     elif msg_type == "TICTACTOE_RESULT":
         tictactoe.handleResult(msg_dict, sender_ip, peer_table, logger)
     elif msg_type == "GROUP_CREATE":

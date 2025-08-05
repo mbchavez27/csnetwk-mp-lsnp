@@ -59,7 +59,7 @@ def handle_user_command(input_str, user_profile, peer_table):
     elif command == "/tictactoe":
         handle_tictactoe_command(args, user_profile, peer_table)
     elif command == "/move":
-        handle_move_command(args, user_profile)
+        handle_move_command(args, user_profile, peer_table)
     elif command == "/exit":
         handle_exit_command(user_profile)
     else:
@@ -502,7 +502,7 @@ def handle_tictactoe_command(args, user_profile, peer_table):
     sendInvite(game_id, symbol_choice, opponent_ip, user_profile, peer_table)
 
         
-def handle_move_command(args, user_profile):
+def handle_move_command(args, user_profile, peer_table):
     
     if len(args) < 2:
         print("move GAMEID POSITION")
@@ -530,8 +530,8 @@ def handle_move_command(args, user_profile):
         
     matches = [s for s, uid in game["players"].items() if uid == user_profile["user_id"]]
     user_symbol = matches[0]
-    sendMove(game_id, position, user_symbol, opponent_ip)
-        
+    sendMove(game_id, position, user_symbol, opponent_ip, user_profile, peer_table)
+ 
     if game["board"][position] == " ":
         game["board"][position] = user_symbol
         printBoard(game["board"])

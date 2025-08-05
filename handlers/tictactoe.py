@@ -1,7 +1,8 @@
 import random
 import time
 from network.sender import unicast_message
-
+from tokens.generator import generate_token
+import uuid
 active_games = {}
 WIN_LINES = [
         [0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]
@@ -58,12 +59,17 @@ def checkWinner(board):
     return None, None
 
 def findIP(game, sender):
+    if "@" in sender:
+        sender_ip = sender.split("@")[1]
+    else:
+        sender_ip = sender
     for symbol, user_id in game["players"].items():
-        if user_id != sender:
-            return user_id.split("@")[1]
-    return
+        user_ip = user_id.split("@")[1]
+        if user_ip != sender_ip:
+            return user_ip
+    return None
 
-def handleMove(msg, sender, peer_table, logger):
+def handleMove(msg, sender, user_profile, peer_table, logger):
     game_id = msg.get("GAMEID")
     position = int(msg.get("POSITION", -1))
     symbol = msg.get("SYMBOL")
@@ -85,7 +91,8 @@ def handleMove(msg, sender, peer_table, logger):
     
     if winner:
         opponent_ip = findIP(game, sender)
-        sendResults(game_id, winner, winning_line, opponent_ip)
+        sendResults(game_id, winner, winning_line, user_profile, peer_table)
+
         active_games.pop(game_id, None)
     else:
         game["turn"] = "O" if symbol == "X" else "X"
@@ -116,8 +123,10 @@ def sendInvite(game_id, symbol_choice, opponent_ip, user_profile, peer_table):
         "FROM": user_profile["user_id"],
         "TO": opponent_user_id,
         "GAMEID": game_id,
+        "MESSAGE_ID": uuid.uuid4().hex[:8],
         "SYMBOL": symbol_choice,
-        "TIMESTAMP": int(time.time())
+        "TIMESTAMP": int(time.time()),
+        "TOKEN": generate_token(user_profile["user_id"], 3600, "game")
     }
     active_games[game_id] = {
             "board": [" "] * 9,
@@ -126,24 +135,46 @@ def sendInvite(game_id, symbol_choice, opponent_ip, user_profile, peer_table):
         }
     unicast_message(formatMessage(msg), opponent_ip)
 
-def sendMove(game_id, position, symbol, opponent_ip):
+def sendMove(game_id, position, symbol, opponent_ip, user_profile, peer_table):
+    opponent_user_id = next(
+        (uid for uid, data in peer_table.peers.items() if data["ip"] == opponent_ip),
+        f"unknown@{opponent_ip}"
+    )
     msg = {
         "TYPE": "TICTACTOE_MOVE",
+        "FROM": user_profile["user_id"],
+        "TO": opponent_user_id,
         "GAMEID": game_id,
         "POSITION": str(position),
+        "MESSAGE_ID": uuid.uuid4().hex[:8],
         "SYMBOL": symbol,
-        "TIMESTAMP": int(time.time())
+        "TIMESTAMP": int(time.time()),
+        "TOKEN": generate_token(user_profile["user_id"], 3600, "game")
     }
     unicast_message(formatMessage(msg), opponent_ip)
 
-def sendResults(game_id, winner, winning_line, opponent_ip):
-    print(f"[DEBUG] Sending TICTACTOE_RESULT to {opponent_ip}")
+def sendResults(game_id, winner, winning_line, user_profile, peer_table):
+    game = active_games.get(game_id)
+    
+    sender_id = user_profile["user_id"]
+    opponent_ip = None
+    opponent_user_id = None
+    for symbol, uid in game["players"].items():
+        if uid != sender_id:
+            opponent_user_id = uid
+            opponent_ip = uid.split("@")[1]
+            break
+
     msg = {
         "TYPE": "TICTACTOE_RESULT",
+        "FROM": user_profile["user_id"],
+        "TO": opponent_user_id,
         "GAMEID": game_id,
+        "MESSAGE_ID": uuid.uuid4().hex[:8],
         "RESULT": "WIN" if winner in ["X", "O"] else "",
         "SYMBOL": winner if winner in ["X", "O"] else "DRAW",
         "WINNING_LINE": ",".join(str(x) for x in winning_line) if winning_line else "",
         "TIMESTAMP": int(time.time())
     }
     unicast_message(formatMessage(msg), opponent_ip)
+    unicast_message(formatMessage(msg), user_profile["ip"])

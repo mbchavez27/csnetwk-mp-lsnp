@@ -89,7 +89,7 @@ def main():
                 break
 
     def on_receive(msg, addr):
-        if addr[0] == ip:
+        if addr[0] == user_profile["ip"]:
             return  # Ignore own broadcast
         if logger.verbose:
             logger.recv(msg, addr[0])
