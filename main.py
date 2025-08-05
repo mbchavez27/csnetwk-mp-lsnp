@@ -2,7 +2,7 @@ import argparse
 import threading
 import time
 
-from network.sender import broadcast_message
+from network.sender import broadcast_message, send_message
 from network.receiver import listen_for_messages
 from network.dispatcher import dispatch_message
 from handlers.profile import build_profile_message
@@ -11,6 +11,7 @@ from handlers.commands import handle_user_command
 from utils.logger import Logger
 from utils.ip import get_own_ip
 from utils.peers import PeerTable
+from network.mdns import LsnpMDNS
 
 peer_table = PeerTable()
 BROADCAST_INTERVAL = 300
@@ -23,6 +24,7 @@ def main():
     parser.add_argument("--username", required=True)
     parser.add_argument("--status", default="Exploring LSNP!")
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--mdns", action="store_true", help="Enable mDNS peer discovery")
     args = parser.parse_args()
 
     logger = Logger(verbose=args.verbose)
@@ -43,6 +45,21 @@ def main():
     }
 
     last_profile_time = 0
+
+    def on_mdns_discovery(peer_ip):
+        if peer_ip != ip:  # ignore self
+            msg = build_profile_message(
+                user_id,
+                user_profile["username"],
+                user_profile["status"],
+            )
+            send_message(msg, peer_ip)
+            logger.send(msg, peer_ip)
+
+    if args.mdns:
+        mdns = LsnpMDNS(user_id, PORT, on_mdns_discovery)
+        mdns.register_service()
+        mdns.browse_services()
 
     # User Discovery: PING or PROFILE at regular 300-second intervals using broadcast communication
     def user_discovery():
