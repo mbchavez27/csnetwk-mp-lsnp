@@ -11,7 +11,6 @@ from handlers.commands import handle_user_command
 from utils.logger import Logger
 from utils.ip import get_own_ip
 from utils.peers import PeerTable
-from tokens.generator import generate_token
 
 peer_table = PeerTable()
 BROADCAST_INTERVAL = 300
@@ -20,9 +19,7 @@ PORT = 50999
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--ip", default=get_own_ip(), help="The simulated peer IP (e.g., 127.0.0.2)"
-    )  # for testing on own terminals for now
+    parser.add_argument("--ip", default=get_own_ip(), help="The simulated peer IP")  # to allow testing on multiple terminals
     parser.add_argument("--username", required=True)
     parser.add_argument("--status", default="Exploring LSNP!")
     parser.add_argument("--verbose", action="store_true")

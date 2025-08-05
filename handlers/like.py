@@ -1,45 +1,4 @@
-# To Test LIKE / UNLIKE:
-#
-# 1. Open two terminals.
-#
-#    Terminal 1:
-#     python main.py --ip 127.0.0.2 --username Bella --status Hello --verbose
-#
-#    Terminal 2:
-#     python main.py --ip 127.0.0.3 --username Edward --status Exploring --verbose
-#
-# 2. From Bella’s prompt (Terminal 1):
-#     /follow Edward@127.0.0.3
-#
-# 3. From Edward’s prompt (Terminal 2):
-#     /post Hello from LSNP!
-#
-# 4. Back in Bella’s prompt (Terminal 1):
-#     Check that the post from Edward appears.
-#     Note the timestamp shown in the verbose log (e.g., 1754238603)
-#
-#     Then run:
-#     /like Edward@127.0.0.3 <timestamp>
-#
-# 5. Expected Output:
-#
-#    - Terminal 1 (Bella):
-#        You liked Edward's post from <timestamp>
-#
-#    - Terminal 2 (Edward):
-#        Bella likes your post [post content]
-#
-# 6. To unlike a previously liked post:
-#     /like Edward@127.0.0.3 <timestamp>
-#
-#    - Terminal 1 (Bella):
-#        You unliked Edward's post from <timestamp>
-#
-#    - Terminal 2 (Edward):
-#        Bella unliked your post [post content]
-
 import time
-import secrets
 from tokens.validator import validate_token
 
 def build_like_message (sender_id: str, receiver_id: str, post_timestamp: int, action, token: str) -> str:

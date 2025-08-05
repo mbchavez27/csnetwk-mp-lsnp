@@ -10,6 +10,7 @@ from handlers.dm import build_dm_message
 from handlers.post import build_post_message
 from handlers.like import build_like_message
 from network.sender import unicast_message, broadcast_message
+from tokens.validator import revoke_token
 
 
 def handle_user_command(input_str, user_profile):
@@ -52,14 +53,13 @@ def handle_user_command(input_str, user_profile):
         handle_group_message_command(args, user_profile)
     elif command == "/info":
         handle_info_command(user_profile)
+    elif command == "/exit":
+        handle_exit_command(user_profile)
     else:
         print(f"Unknown command: {command}. Type `/help` for available commands.")
 
 
 def handle_profile_command(args, user_profile):
-    """
-    Updates display name and/or status.
-    """
     updated = False
     for arg in args:
         if arg.startswith("name="):
@@ -82,9 +82,6 @@ def handle_profile_command(args, user_profile):
 
 
 def handle_status_command(args, context):
-    """
-    Quickly updates just the status.
-    """
     if not args:
         print("Usage: /status Feeling happy!")
         return
@@ -199,9 +196,6 @@ def handle_post_command(args, user_profile):
 
 
 def handle_follow_command(args, user_profile):
-    """
-    SENDS A FOLLOW MESSAGE TO THE USER.
-    """
     if not args:
         print("Usage: /follow <user_id>")
         return
@@ -222,9 +216,6 @@ def handle_follow_command(args, user_profile):
 
 
 def handle_unfollow_command(args, user_profile):
-    """
-    SENDS AN UNFOLLOW MESSAGE TO THE USER.
-    """
     if not args:
         print("Usage: /unfollow <user_id>")
         return
@@ -245,9 +236,6 @@ def handle_unfollow_command(args, user_profile):
 
 
 def handle_dm_command(args, user_profile):
-    """
-    SENDS A DM
-    """
     if len(args) < 2:
         print("Usage: /dm <user_id> <message>")
         return
@@ -470,3 +458,11 @@ def handle_info_command(user_profile):
             print(f"{group_name} | Members: {', '.join(members)}")
 
     print("====================\n")
+
+def handle_exit_command(user_profile):
+    # Revoke tokens
+    for token in user_profile.get("tokens", {}).values():
+        revoke_token(token)
+
+    print("All tokens revoked. Exiting...")
+    exit(0)

@@ -1,24 +1,3 @@
-# To Test POST (Broadcast Message to Followers):
-#
-# 1. Open two terminals.
-#
-#    Terminal 1:
-#     python main.py --ip 127.0.0.2 --username Bella --status Hello --verbose
-#
-#    Terminal 2:
-#     python main.py --ip 127.0.0.3 --username Edward --status Online --verbose
-#
-# 2. From Bella’s prompt:
-#     /follow Edward@127.0.0.3
-#
-# 3. From Edward’s prompt:
-#     /post Hello followers!
-#
-# 4. Expected Output:
-#    - Terminal 1 (Bella):
-#        [POST] Edward: Hello followers!
-#
-
 import time
 import secrets
 from tokens.validator import validate_token
