@@ -9,36 +9,35 @@ git clone https://github.com/mbchavez27/csnetwk-mp-lsnp.git
 cd csnetwk-mp-lsnp
 ```
 
-2. Create and switch to your feature (task) branch
-
+2. Install dependencies
 ```bash
-git switch -c feature/feature-name
+    pip install zeroconf
 ```
 
-## Testing
-Each peer simulates a separate terminal using a unique loopback IP:
+## Testing in Multiple Terminals
+Each peer simulates a separate terminal:
 ```bash
-# Terminal 1 in verbose mode
-python main.py --ip 127.0.0.2 --username Bella --status Hello --verbose
+# Terminal 1 
+python main.py --ip 127.0.0.1 --username Alice --verbose
 
 # Terminal 2 
-python main.py --ip 127.0.0.3 --username Edward --verbose
+python main.py --ip 127.0.0.2 --username Bob --verbose
 
-# Terminal 3 in non verbose mode
-python main.py --ip 127.0.0.4 --username Jacob
+# Terminal 3
+python main.py --ip 127.0.0.3 --username Carol
 
 ```
 --verbose enables debug logging to view sent/received messages.
 --status is optional. Default is "Exploring LSNP!"
 
 ## Available Commands
-Update your display name and status
+Change your username
 ```bash
-/profile name="New Name" status="New Status"
+/profile name="<new_name>"
 ```
-Quickly update just your status
+Change your status
 ```bash
-/status Exploring LSNP!
+/status "<new_status>"
 ```
 Enable verbose debug logging
 ```bash
@@ -48,9 +47,55 @@ Disable verbose debug logging
 ```bash
 /verbose off
 ```
+Show your user info, followed peers, and groups
+```bash
+/info
+```
+Follow a user to see their public posts
+```bash
+/follow "<user_id>"
+```
+Unfollow a user
+```bash
+/unfollow "<user_id>"
+```
+Broadcast a public POST to followers
+```bash
+/post "<message>"
+```
+Send a direct private message
+```bash
+/dm "<user_id>" "<message>"
+```
+Like a specific post / Remove your like from a post
+```bash
+/like "<user_id>" "<post_timestamp>"
+```
+Create a new group
+```bash
+/group_create "<group_name>" "<user_id>" "<user_id_>"...
+```
+Add or remove member from a group
+```bash
+/group_update "<group_name>" add/remove "<user_id>"
+```
+Send a message to all members of a group
+```bash
+/group_msg "<group_name>" "<message>"
+```
 Show the list of available commands
 ```bash
 /help
 ```
+Exit the LSNP application
+```bash
+/exit
+```
+### Authors
+Cayanan, Kristine Magdalene
+Chavez, Max Benedict
+Licup, Evan Gabriel
+Rodriguez, Juan Titus
 
-## Checklist
+## AI Disclaimer
+The LSNP protocol is primarily designed by the authors. AI tools, primarily ChatGPT, were used to assist in formulating message structures, suggesting improvements to the peer discovery process, including optional mDNS integration, UDP usage and refining formatting. All AI-assisted content was carefully reviewed, validated, and adapted to ensure alignment with the project’s functional and educational goals. All AI-generated content was thoroughly reviewed, validated, and adapted to meet the functional and educational goals of the project.
