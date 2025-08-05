@@ -11,11 +11,11 @@ cd csnetwk-mp-lsnp
 
 2. Install dependencies
 ```bash
-    pip install zeroconf
+pip install zeroconf
 ```
 
-## Testing in Multiple Terminals
-Each peer simulates a separate terminal:
+## Testing in Multiple Terminals (Same Machine)
+For easy testing, each peer simulates a separate terminal:
 ```bash
 # Terminal 1 
 python main.py --ip 127.0.0.1 --username Alice --verbose
@@ -28,6 +28,7 @@ python main.py --ip 127.0.0.3 --username Carol
 
 ```
 --verbose enables debug logging to view sent/received messages.
+
 --status is optional. Default is "Exploring LSNP!"
 
 ## Available Commands
@@ -93,8 +94,11 @@ Exit the LSNP application
 ```
 ### Authors
 Cayanan, Kristine Magdalene
+
 Chavez, Max Benedict
+
 Licup, Evan Gabriel
+
 Rodriguez, Juan Titus
 
 ## AI Disclaimer
