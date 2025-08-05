@@ -505,6 +505,7 @@ def handle_tictactoe_command(args, user_profile, peer_table):
         
     game_id = f"g{int(time.time())}"
     sendInvite(game_id, symbol_choice, opponent_ip, user_profile, peer_table)
+    print(f"Game ID: {game_id}")
 
         
 def handle_move_command(args, user_profile, peer_table):
