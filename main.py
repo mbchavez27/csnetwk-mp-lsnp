@@ -84,7 +84,7 @@ def main():
         while True:
             try:
                 user_input = input("> ")
-                handle_user_command(user_input, user_profile)
+                handle_user_command(user_input, user_profile, peer_table)
             except (EOFError, KeyboardInterrupt):
                 break
 
