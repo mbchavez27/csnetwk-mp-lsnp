@@ -47,6 +47,8 @@ def dispatch_message(message: str, sender_ip: str, user_profile):
         tictactoe.handleMove(msg_dict, sender_ip, user_profile, peer_table, logger)
     elif msg_type == "TICTACTOE_RESULT":
         tictactoe.handleResult(msg_dict, sender_ip, peer_table, logger)
+    elif msg_type == "LIKE":
+        like.handle_like(msg_dict, peer_table, user_profile, logger)
     elif msg_type == "GROUP_CREATE":
         group.handle_group_create(msg_dict, sender_ip, user_profile, send_message)
     elif msg_type == "GROUP_UPDATE":
