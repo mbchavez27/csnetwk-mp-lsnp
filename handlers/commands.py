@@ -132,6 +132,8 @@ def handle_help_command():
     print("  /group_create <group_name> <member1@ip> <member2@ip> ...")
     print("  /group_update <group_name> <add|remove> <member@ip> ...")
     print("  /group_msg <group_name> <message>")
+    print("  /tictactoe @username")
+    print("  /move <gameid> <position>")
     print("  /help")
     print("  /info")
     print("  /exit")
