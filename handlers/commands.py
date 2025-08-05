@@ -139,7 +139,7 @@ def handle_help_command():
     print("  /tictactoe @username")
     print("  /move <gameid> <position>")
     print("  /help")
-    print("  /info")
+    print("  /peer_info")
     print("  /exit")
 
 
