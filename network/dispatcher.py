@@ -1,4 +1,4 @@
-from handlers import profile, ping, post, file_transfer, post, dm, follow, like, group
+from handlers import profile, ping, post, file_transfer, post, dm, follow, like, group, tictactoe
 from utils.parser import parse_message
 from network.sender import send_message
 
@@ -42,11 +42,11 @@ def dispatch_message(message: str, sender_ip: str, user_profile):
     elif msg_type == "FILE_RECEIVED":
         file_transfer.handle_file_received(msg_dict, peer_table, logger)
     elif msg_type == "TICTACTOE_INVITE":
-        pass
+        tictactoe.handleInvite(msg_dict, sender_ip, peer_table, logger)
     elif msg_type == "TICTACTOE_MOVE":
-        pass
+        tictactoe.handleMove(msg_dict, sender_ip, peer_table, logger)
     elif msg_type == "TICTACTOE_RESULT":
-        pass
+        tictactoe.handleResult(msg_dict, sender_ip, peer_table, logger)
     elif msg_type == "LIKE":
         like.handle_like(msg_dict, peer_table, user_profile, logger)
     elif msg_type == "GROUP_CREATE":

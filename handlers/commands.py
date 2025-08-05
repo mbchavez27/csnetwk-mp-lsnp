@@ -11,9 +11,11 @@ from handlers.post import build_post_message
 from handlers.like import build_like_message
 from network.sender import unicast_message, broadcast_message
 from tokens.validator import revoke_token
+from handlers.tictactoe import (sendInvite, sendMove, sendResults, active_games, findIP, printBoard, checkWinner)
+import time
+import random
 
-
-def handle_user_command(input_str, user_profile):
+def handle_user_command(input_str, user_profile, peer_table):
     """
     Dispatches a command based on user input.
     """
@@ -53,6 +55,10 @@ def handle_user_command(input_str, user_profile):
         handle_group_message_command(args, user_profile)
     elif command == "/info":
         handle_info_command(user_profile)
+    elif command == "/tictactoe":
+        handle_tictactoe_command(args, user_profile, peer_table)
+    elif command == "/move":
+        handle_move_command(args, user_profile)
     elif command == "/exit":
         handle_exit_command(user_profile)
     else:
@@ -469,6 +475,68 @@ def handle_info_command(user_profile):
             print(f"{group_name} | Members: {', '.join(members)}")
 
     print("====================\n")
+
+def handle_tictactoe_command(args, user_profile, peer_table):
+    if len(args) < 1:
+            print("tictactoe @username")
+            return
+        
+    opponent_username = args[0].lstrip("@")
+    opponent_ip = None
+    for user_id, peer in peer_table.peers.items():
+        if user_id.startswith(opponent_username + "@"):
+            opponent_ip = peer.get("ip")
+            break
+
+    if not opponent_ip:
+        print(f"Could not find user {opponent_username}.")
+        return
+        
+    symbol_choice = input("Choose between X or O [X/O]: ").strip().upper()
+    if symbol_choice not in ["X", "O"]:
+        print("Invalid choice. Randomly picking between X or O.")
+        symbol_choice = random.choice(["X", "O"])
+        
+    game_id = f"g{int(time.time())}"
+    sendInvite(game_id, symbol_choice, opponent_ip, user_profile, peer_table)
+
+        
+def handle_move_command(args, user_profile):
+    
+    if len(args) < 2:
+        print("move GAMEID POSITION")
+        return
+    game_id = args[0]
+    try:
+        position = int(args[1])
+    except ValueError:
+        print("Position must be a number (0-8).")
+        return
+        
+    if position < 0 or position > 8:
+        print("Invalid number. Use 0-8.")
+        return
+        
+    game = active_games.get(game_id)
+    if not game:
+        print(f"No active game found with ID {game_id}")
+        return
+        
+    opponent_ip = findIP(game, user_profile["user_id"])
+    if not opponent_ip:
+        print("Could not find user.")
+        return
+        
+    matches = [s for s, uid in game["players"].items() if uid == user_profile["user_id"]]
+    user_symbol = matches[0]
+    sendMove(game_id, position, user_symbol, opponent_ip)
+        
+    if game["board"][position] == " ":
+        game["board"][position] = user_symbol
+        printBoard(game["board"])
+    else:
+        print("Position already taken.")
+
 
 def handle_exit_command(user_profile):
     # Revoke tokens
