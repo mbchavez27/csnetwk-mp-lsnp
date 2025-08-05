@@ -14,6 +14,9 @@ from tokens.validator import revoke_token
 from handlers.tictactoe import (sendInvite, sendMove, sendResults, active_games, findIP, printBoard, checkWinner)
 import time
 import random
+from handlers.tictactoe import (sendInvite, sendMove, sendResults, active_games, findIP, printBoard, checkWinner)
+import time
+import random
 
 def handle_user_command(input_str, user_profile, peer_table):
     """
@@ -133,6 +136,8 @@ def handle_help_command():
     print("  /group_create <group_name> <member1@ip> <member2@ip> ...")
     print("  /group_update <group_name> <add|remove> <member@ip> ...")
     print("  /group_msg <group_name> <message>")
+    print("  /tictactoe @username")
+    print("  /move <gameid> <position>")
     print("  /help")
     print("  /info")
     print("  /exit")
