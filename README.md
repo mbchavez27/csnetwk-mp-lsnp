@@ -50,7 +50,7 @@ Disable verbose debug logging
 ```
 Show your peer info, followed peers, and groups
 ```bash
-/peer_info
+/info
 ```
 Follow a user to see their public posts
 ```bash
