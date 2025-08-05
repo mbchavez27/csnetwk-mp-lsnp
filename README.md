@@ -48,9 +48,9 @@ Disable verbose debug logging
 ```bash
 /verbose off
 ```
-Show your user info, followed peers, and groups
+Show your peer info, followed peers, and groups
 ```bash
-/info
+/peer_info
 ```
 Follow a user to see their public posts
 ```bash
@@ -83,6 +83,14 @@ Add or remove member from a group
 Send a message to all members of a group
 ```bash
 /group_msg "<group_name>" "<message>"
+```
+Send a tictactoe game invite
+```bash
+/tictactoe @username
+```
+Make a move in the game
+```bash
+/move GAMEID POSITION
 ```
 Show the list of available commands
 ```bash

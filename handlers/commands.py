@@ -57,7 +57,7 @@ def handle_user_command(input_str, user_profile, peer_table):
         handle_group_update_command(args, user_profile)
     elif command == "/group_msg":
         handle_group_message_command(args, user_profile)
-    elif command == "/info":
+    elif command == "/peer_info":
         handle_info_command(user_profile)
     elif command == "/tictactoe":
         handle_tictactoe_command(args, user_profile, peer_table)
@@ -447,7 +447,7 @@ def handle_group_message_command(args, user_profile):
 def handle_info_command(user_profile):
     peer_table = user_profile["peer_table"]
 
-    print("\n=== USER INFO ===")
+    print("\n=== PEER INFO ===")
     print(f"User ID   : {user_profile['user_id']}")
     print(f"Username  : {user_profile['username']}")
     print(f"Status    : {user_profile['status']}")
