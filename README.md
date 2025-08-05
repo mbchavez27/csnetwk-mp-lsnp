@@ -92,7 +92,7 @@ Exit the LSNP application
 ```bash
 /exit
 ```
-### Authors
+## Authors
 Cayanan, Kristine Magdalene
 
 Chavez, Max Benedict
