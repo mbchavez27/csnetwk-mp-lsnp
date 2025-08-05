@@ -57,6 +57,10 @@ def handle_user_command(input_str, user_profile, peer_table):
         handle_group_update_command(args, user_profile)
     elif command == "/group_msg":
         handle_group_message_command(args, user_profile)
+<<<<<<< HEAD
+    elif command == "/info":
+        handle_group_info_command(args, user_profile)
+=======
     elif command == "/peer_info":
         handle_info_command(user_profile)
     elif command == "/tictactoe":
@@ -65,6 +69,7 @@ def handle_user_command(input_str, user_profile, peer_table):
         handle_move_command(args, user_profile, peer_table)
     elif command == "/exit":
         handle_exit_command(user_profile)
+>>>>>>> main
     else:
         print(f"Unknown command: {command}. Type `/help` for available commands.")
 

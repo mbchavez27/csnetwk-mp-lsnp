@@ -56,7 +56,18 @@ def handle_group_update(msg_dict, sender_ip, user_profile, send_message):
     group_name = msg_dict.get("GROUP_NAME")
     action = msg_dict.get("ACTION")
     from_user = msg_dict.get("FROM")
+    msg_id = msg_dict.get("ID") or msg_dict.get("TOKEN")
     members = msg_dict.get("MEMBERS", "").split(",")
+
+    # Recursion prevention using msg_id
+    seen = user_profile.setdefault("user_seen_tokens", set())
+    if msg_id in seen:
+        return
+    seen.add(msg_id)
+
+    # Optional cleanup to limit memory
+    if len(seen) > 1000:
+        seen.clear()
 
     group_table = user_profile.get("groups", {})
     group = group_table.get(group_name)
@@ -104,7 +115,19 @@ def handle_group_update(msg_dict, sender_ip, user_profile, send_message):
             "TOKEN": token,
         }
         _, ip = peer.split("@")
-        send_message(serialize_message(msg), ip)
+        send_message(
+            serialize_message(
+                {
+                    "TYPE": "GROUP_UPDATE",
+                    "FROM": from_user,
+                    "GROUP_NAME": group_name,
+                    "ACTION": action,
+                    "MEMBERS": ",".join(members),
+                    "ID": msg_id,
+                }
+            ),
+            ip,
+        )
 
 
 def handle_group_message(msg_dict, sender_ip, user_profile, send_message):
@@ -182,3 +205,39 @@ def handle_group_message(msg_dict, sender_ip, user_profile, send_message):
             ),
             ip,
         )
+
+
+def handle_group_info(msg_dict, sender_ip, user_profile, send_message):
+    logger = user_profile.get("logger")
+    group_name = msg_dict.get("GROUP_NAME")
+    from_user = msg_dict.get("FROM")
+
+    group_table = user_profile.get("groups", {})
+    group = group_table.get(group_name)
+
+    if not group:
+        if logger and logger.verbose:
+            logger.debug(f"[GROUP_INFO] Group '{group_name}' not found.")
+        return
+
+    creator = group.get("creator", "[unknown]")
+    members = group.get("members", [])
+
+    if logger and logger.verbose:
+        logger.debug(
+            f"[GROUP_INFO] Sending group info for '{group_name}' to {from_user}"
+        )
+
+    response = {
+        "TYPE": "GROUP_INFO_RESPONSE",
+        "GROUP_NAME": group_name,
+        "CREATOR": creator,
+        "MEMBERS": ",".join(members),
+    }
+
+    try:
+        _, ip = from_user.split("@")
+        send_message(serialize_message(response), ip)
+    except Exception as e:
+        if logger:
+            logger.warning(f"[GROUP_INFO] Failed to send info: {e}")
