@@ -1,4 +1,8 @@
-def handle_user_command(input_str, user_profile):
+from handlers.tictactoe import (sendInvite, sendMove, sendResults, active_games, findIP, printBoard, checkWinner)
+import time
+import random
+
+def handle_user_command(input_str, user_profile, peer_table):
     """
     Dispatches a command based on user input.
     """
@@ -27,6 +31,67 @@ def handle_user_command(input_str, user_profile):
     # 
     # add your commands
     #
+    elif command == "/tictactoe":
+        if len(tokens) < 2:
+            print("tictactoe @username")
+            return
+        
+        opponent_username = tokens[1].lstrip("@")
+        opponent_ip = None
+        for user_id, peer in peer_table.peers.items():
+            if user_id.startswith(opponent_username + "@"):
+                opponent_ip = peer.get("ip")
+                break
+
+        if not opponent_ip:
+            print(f"Could not find user {opponent_username}.")
+            return
+        
+        symbol_choice = input("Choose between X or O [X/O]: ").strip().upper()
+        if symbol_choice not in ["X", "O"]:
+            print("Invalid choice. Randomly picking between X or O.")
+            symbol_choice = random.choice(["X", "O"])
+        
+        game_id = f"g{int(time.time())}"
+        sendInvite(game_id, symbol_choice, opponent_ip, user_profile, peer_table)
+
+        
+    
+    elif command == "/move":
+        if len(tokens) < 3:
+            print("move GAMEID POSITION")
+            return
+        game_id = tokens[1]
+        try:
+            position = int(tokens[2])
+        except ValueError:
+            print("Position must be a number (0-8).")
+            return
+        
+        if position < 0 or position > 8:
+            print("Invalid number. Use 0-8.")
+            return
+        
+        game = active_games.get(game_id)
+        if not game:
+            print(f"No active game found with ID {game_id}")
+            return
+        
+        opponent_ip = findIP(game, user_profile["user_id"])
+        if not opponent_ip:
+            print("Could not find user.")
+            return
+        
+        matches = [s for s, uid in game["players"].items() if uid == user_profile["user_id"]]
+        user_symbol = matches[0]
+        sendMove(game_id, position, user_symbol, opponent_ip)
+        
+        if game["board"][position] == " ":
+            game["board"][position] = user_symbol
+            printBoard(game["board"])
+        else:
+            print("Position already taken.")
+
     elif command == "/help":
         handle_help_command()
     else:
